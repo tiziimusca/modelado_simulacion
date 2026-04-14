@@ -1,0 +1,694 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Laboratorio Virtual de Metodos Numericos</title>
+  <style>
+    :root {
+      --bg: #f3f7fc;
+      --panel: #ffffff;
+      --line: #d8e3ef;
+      --ink: #1d2733;
+      --muted: #64748b;
+      --accent: #0f6d8c;
+      --accent-2: #087f5b;
+      --chip: #e6f4ff;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background: radial-gradient(circle at 10% 0%, #eaf2ff, var(--bg) 60%);
+      color: var(--ink);
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 280px 1fr 340px;
+      gap: 12px;
+      height: 100vh;
+      padding: 12px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      overflow: hidden;
+    }
+
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .head {
+      padding: 14px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(135deg, #0f6d8c, #0b8f6f);
+      color: #fff;
+    }
+
+    .head h1 {
+      margin: 0;
+      font-size: 1.05rem;
+    }
+
+    .head p {
+      margin: 5px 0 0;
+      font-size: 0.84rem;
+      opacity: 0.95;
+    }
+
+    .method-list {
+      padding: 8px;
+      overflow: auto;
+    }
+
+    .method-btn {
+      width: 100%;
+      text-align: left;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--ink);
+      padding: 10px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      font-size: 0.92rem;
+    }
+
+    .method-btn.active {
+      border-color: var(--accent);
+      background: #eef8fc;
+    }
+
+    .method-btn small {
+      display: block;
+      color: var(--muted);
+      margin-top: 4px;
+      font-size: 0.78rem;
+    }
+
+    .viewer {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .viewer-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      font-size: 0.9rem;
+    }
+
+    .viewer-top a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    iframe {
+      border: 0;
+      width: 100%;
+      height: calc(100vh - 70px);
+      background: #fff;
+    }
+
+    .assistant {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .assistant .title {
+      padding: 12px;
+      border-bottom: 1px solid var(--line);
+      background: #f8fbff;
+    }
+
+    .assistant .title h2 {
+      margin: 0;
+      font-size: 1rem;
+    }
+
+    .assistant .title p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .assistant-body {
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow: auto;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 120px;
+      resize: vertical;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 0.9rem;
+      font-family: inherit;
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: 0;
+      border-radius: 8px;
+      padding: 8px 12px;
+      cursor: pointer;
+      color: #fff;
+      background: var(--accent);
+      font-size: 0.88rem;
+    }
+
+    button.secondary {
+      background: #475569;
+    }
+
+    .chips {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      background: var(--chip);
+      color: #1864ab;
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 0.76rem;
+      cursor: pointer;
+      border: 1px solid #d5e8ff;
+    }
+
+    .answer {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px;
+      background: #fcfdff;
+      white-space: pre-wrap;
+      font-size: 0.88rem;
+      line-height: 1.4;
+      min-height: 170px;
+    }
+
+    .clarifier {
+      border: 1px dashed var(--line);
+      border-radius: 10px;
+      padding: 10px;
+      background: #f8fbff;
+      display: none;
+      gap: 8px;
+      flex-direction: column;
+    }
+
+    .clarifier p {
+      margin: 0;
+      font-size: 0.84rem;
+      color: var(--muted);
+    }
+
+    .clarifier-options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .clarifier-options button {
+      background: #0b8f6f;
+      font-size: 0.8rem;
+      padding: 6px 9px;
+    }
+
+    @media (max-width: 1200px) {
+      .app {
+        grid-template-columns: 1fr;
+        height: auto;
+      }
+
+      iframe {
+        height: 72vh;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="panel sidebar">
+      <div class="head">
+        <h1>Laboratorio Virtual</h1>
+        <p>Metodos numericos + asistente educativo</p>
+      </div>
+      <div class="method-list" id="methodList"></div>
+    </aside>
+
+    <section class="panel viewer">
+      <div class="viewer-top">
+        <span id="currentLabel">Metodo actual: Biseccion</span>
+        <a id="openDirect" href="biseccion_web.html" target="_blank" rel="noreferrer">Abrir en pestaña nueva</a>
+      </div>
+      <iframe id="sandbox" src="biseccion_web.html" title="Laboratorio"></iframe>
+    </section>
+
+    <aside class="panel assistant">
+      <div class="title">
+        <h2>Asistente IA Educativo (local)</h2>
+        <p>Sugiere metodos y pasos segun tu problema.</p>
+      </div>
+      <div class="assistant-body">
+        <textarea id="prompt" placeholder="Ejemplo: Tengo una ecuacion no lineal y no se que metodo usar. Quiero ver convergencia."></textarea>
+
+        <div class="chips">
+          <span class="chip" data-q="Necesito resolver una raiz y comparar convergencia.">Raices + convergencia</span>
+          <span class="chip" data-q="Quiero integrar una funcion y estimar error.">Integracion + error</span>
+          <span class="chip" data-q="Tengo una EDO con condicion inicial.">EDO inicial</span>
+          <span class="chip" data-q="Quiero interpolar datos experimentales.">Interpolacion</span>
+          <span class="chip" data-q="Necesito resolver Ax=b con pasos.">Sistemas lineales</span>
+        </div>
+
+        <div class="row">
+          <button id="btnSuggest">Sugerir</button>
+          <button class="secondary" id="btnClear">Limpiar</button>
+        </div>
+
+        <div class="clarifier" id="clarifier">
+          <p>Para afinar la recomendacion, elige el tipo de problema:</p>
+          <div class="clarifier-options" id="clarifierOptions">
+            <button data-intent="raices">Raices</button>
+            <button data-intent="integracion">Integracion</button>
+            <button data-intent="edo">EDO</button>
+            <button data-intent="interpolacion">Interpolacion</button>
+            <button data-intent="lineales">Sistemas lineales</button>
+            <button data-intent="estocastico">Monte Carlo</button>
+          </div>
+        </div>
+
+        <div class="answer" id="answer">Escribe tu consulta y pulsa Sugerir.</div>
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    const methods = [
+      { key: "biseccion", name: "Biseccion", desc: "Raices por cambio de signo", file: "biseccion_web.html" },
+      { key: "punto_fijo", name: "Punto Fijo", desc: "Iteracion x = g(x)", file: "punto_fijo_web.html" },
+      { key: "aitken", name: "Aceleracion de Aitken", desc: "Acelera punto fijo", file: "aceleracion_aitken_web.html" },
+      { key: "newton", name: "Newton-Raphson", desc: "Raices con derivada", file: "newton_raphson_web.html" },
+      { key: "interpolacion", name: "Interpolacion de Lagrange", desc: "Aproxima con polinomios", file: "interpolacion_web.html" },
+      { key: "integracion", name: "Metodos de integral", desc: "Rectangulo, Trapecio, Simpson", file: "metodos_integral_web.html" },
+      { key: "montecarlo", name: "Monte Carlo 1D", desc: "Estimacion estocastica", file: "monte_carlo_web.html" },
+      { key: "edo", name: "Ecuaciones diferenciales", desc: "Euler y RK4", file: "ecuaciones_diferenciales_web.html" },
+      { key: "lineales", name: "Sistemas lineales", desc: "Gauss y Gauss-Seidel", file: "sistemas_lineales_web.html" }
+    ];
+
+    const methodList = document.getElementById("methodList");
+    const sandbox = document.getElementById("sandbox");
+    const currentLabel = document.getElementById("currentLabel");
+    const openDirect = document.getElementById("openDirect");
+
+    function setActive(file) {
+      document.querySelectorAll(".method-btn").forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.file === file);
+      });
+      const m = methods.find(x => x.file === file);
+      currentLabel.textContent = `Metodo actual: ${m ? m.name : file}`;
+      openDirect.href = file;
+      sandbox.src = file;
+    }
+
+    methods.forEach((m) => {
+      const btn = document.createElement("button");
+      btn.className = "method-btn";
+      btn.dataset.file = m.file;
+      btn.innerHTML = `${m.name}<small>${m.desc}</small>`;
+      btn.addEventListener("click", () => setActive(m.file));
+      methodList.appendChild(btn);
+    });
+
+    setActive("biseccion_web.html");
+
+    const promptEl = document.getElementById("prompt");
+    const answerEl = document.getElementById("answer");
+    const clarifierEl = document.getElementById("clarifier");
+    const clarifierOptionsEl = document.getElementById("clarifierOptions");
+    let lastAmbiguousQuery = "";
+
+    const RULES = {
+      "biseccion_web.html": {
+        terms: ["biseccion", "cambio de signo", "bolzano", "f(a)", "f(b)", "intervalo [a,b]"]
+      },
+      "newton_raphson_web.html": {
+        terms: ["newton", "newton raphson", "derivada", "tangente", "f'(x)"]
+      },
+      "punto_fijo_web.html": {
+        terms: ["punto fijo", "g(x)", "x=g(x)", "iteracion funcional", "contraccion"]
+      },
+      "aceleracion_aitken_web.html": {
+        terms: ["aitken", "delta cuadrado", "acelerar convergencia", "aceleracion"]
+      },
+      "interpolacion_web.html": {
+        terms: ["interpolacion", "lagrange", "nodos", "datos", "aproximar puntos"]
+      },
+      "metodos_integral_web.html": {
+        terms: ["integral", "simpson", "trapecio", "rectangulo", "cuadratura", "area bajo la curva"]
+      },
+      "monte_carlo_web.html": {
+        terms: ["monte carlo", "aleatorio", "muestras", "incertidumbre", "intervalo de confianza", "varianza"]
+      },
+      "ecuaciones_diferenciales_web.html": {
+        terms: ["edo", "ecuacion diferencial", "dy/dt", "condicion inicial", "rk4", "runge kutta", "euler"]
+      },
+      "sistemas_lineales_web.html": {
+        terms: ["ax=b", "sistema lineal", "matriz", "gauss", "gauss seidel", "eliminacion", "residuo"]
+      }
+    };
+
+    const INTENTS = {
+      raices: {
+        terms: ["raiz", "raices", "f(x)=0", "no lineal", "resolver ecuacion"],
+        methodBoost: {
+          "biseccion_web.html": 4,
+          "newton_raphson_web.html": 4,
+          "punto_fijo_web.html": 3,
+          "aceleracion_aitken_web.html": 2
+        }
+      },
+      integracion: {
+        terms: ["integral", "integrar", "area", "cuadratura", "simpson", "trapecio"],
+        methodBoost: {
+          "metodos_integral_web.html": 6,
+          "monte_carlo_web.html": 2
+        }
+      },
+      estocastico: {
+        terms: ["aleatorio", "monte", "incertidumbre", "probabilidad", "intervalo de confianza"],
+        methodBoost: {
+          "monte_carlo_web.html": 7
+        }
+      },
+      edo: {
+        terms: ["edo", "ecuacion diferencial", "dy/dt", "condicion inicial", "rk4", "euler"],
+        methodBoost: {
+          "ecuaciones_diferenciales_web.html": 8
+        }
+      },
+      interpolacion: {
+        terms: ["interpol", "lagrange", "nodos", "datos experimentales", "aproximar datos"],
+        methodBoost: {
+          "interpolacion_web.html": 8
+        }
+      },
+      lineales: {
+        terms: ["ax=b", "sistema lineal", "matriz", "gauss", "gauss seidel", "algebra lineal"],
+        methodBoost: {
+          "sistemas_lineales_web.html": 8
+        }
+      }
+    };
+
+    function normalizeText(text) {
+      return text
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9\s\[\]\(\)=+\-*/.,]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function scoreMethod(queryNorm, file) {
+      const rule = RULES[file];
+      if (!rule) return { file, score: 0, matched: [] };
+
+      let score = 0;
+      const matched = [];
+
+      for (const term of rule.terms) {
+        const t = normalizeText(term);
+        if (queryNorm.includes(t)) {
+          const weight = t.includes(" ") ? 4 : 2;
+          score += weight;
+          matched.push(term);
+        }
+      }
+
+      // Bonos de contexto transversal.
+      if ((queryNorm.includes("raiz") || queryNorm.includes("f(x)=0")) &&
+          (file === "biseccion_web.html" || file === "newton_raphson_web.html" || file === "punto_fijo_web.html")) {
+        score += 2;
+      }
+      if ((queryNorm.includes("comparar") || queryNorm.includes("convergencia")) &&
+          (file !== "interpolacion_web.html")) {
+        score += 1;
+      }
+
+      return { file, score, matched };
+    }
+
+    function addScore(scoreMap, file, value, reason) {
+      if (!(file in scoreMap)) {
+        scoreMap[file] = { score: 0, reasons: [] };
+      }
+      scoreMap[file].score += value;
+      if (reason) scoreMap[file].reasons.push(reason);
+    }
+
+    function detectIntentBoosts(queryNorm, scoreMap) {
+      Object.entries(INTENTS).forEach(([intent, data]) => {
+        let hits = 0;
+        data.terms.forEach((term) => {
+          if (queryNorm.includes(normalizeText(term))) hits += 1;
+        });
+        if (hits > 0) {
+          Object.entries(data.methodBoost).forEach(([file, w]) => {
+            addScore(scoreMap, file, w + (hits - 1), `intencion ${intent}`);
+          });
+        }
+      });
+    }
+
+    function applySpecificHints(queryNorm, scoreMap) {
+      if (queryNorm.includes("sin derivada") || queryNorm.includes("no tengo derivada")) {
+        addScore(scoreMap, "newton_raphson_web.html", -5, "penalizacion: sin derivada");
+        addScore(scoreMap, "biseccion_web.html", 3, "alternativa robusta sin derivada");
+      }
+      if (queryNorm.includes("cambio de signo") || queryNorm.includes("intervalo")) {
+        addScore(scoreMap, "biseccion_web.html", 5, "pista: intervalo/cambio de signo");
+      }
+      if (queryNorm.includes("g(x)") || queryNorm.includes("x=g(x)") || queryNorm.includes("iteracion funcional")) {
+        addScore(scoreMap, "punto_fijo_web.html", 6, "pista: formulacion x=g(x)");
+      }
+      if (queryNorm.includes("acelerar") || queryNorm.includes("mas rapido") || queryNorm.includes("lento")) {
+        addScore(scoreMap, "aceleracion_aitken_web.html", 4, "pista: acelerar convergencia");
+      }
+      if (queryNorm.includes("comparar") && queryNorm.includes("metodos")) {
+        addScore(scoreMap, "metodos_integral_web.html", 1, "comparacion de metodos");
+        addScore(scoreMap, "ecuaciones_diferenciales_web.html", 1, "comparacion de metodos");
+        addScore(scoreMap, "newton_raphson_web.html", 1, "comparacion de metodos");
+      }
+    }
+
+    function inferMethod(query) {
+      const qn = normalizeText(query);
+      const scoreMap = {};
+
+      methods.forEach((m) => {
+        const basic = scoreMethod(qn, m.file);
+        addScore(scoreMap, m.file, basic.score, basic.matched.length ? `coincidencias: ${basic.matched.join(", ")}` : "");
+      });
+
+      detectIntentBoosts(qn, scoreMap);
+      applySpecificHints(qn, scoreMap);
+
+      const ranked = methods
+        .map((m) => ({ file: m.file, score: scoreMap[m.file]?.score || 0, reasons: scoreMap[m.file]?.reasons || [] }))
+        .sort((a, b) => b.score - a.score);
+
+      const top = ranked[0];
+      const second = ranked[1] || { score: 0 };
+      const alternatives = ranked.slice(1, 4);
+      const gap = top.score - second.score;
+      let confidence = "baja";
+      if (top.score >= 10 && gap >= 3) confidence = "alta";
+      else if (top.score >= 6 && gap >= 1) confidence = "media";
+
+      // Fallback mas neutral cuando no hay senales claras.
+      const selected = top.score > 0 ? top.file : "newton_raphson_web.html";
+      return {
+        file: selected,
+        confidence,
+        top,
+        alternatives,
+        ambiguous: top.score <= 3 || gap <= 0
+      };
+    }
+
+    function chooseByIntent(intent, query) {
+      const qn = normalizeText(query);
+
+      if (intent === "raices") {
+        if (qn.includes("sin derivada") || qn.includes("no tengo derivada")) return "biseccion_web.html";
+        if (qn.includes("newton") || qn.includes("derivada") || qn.includes("tangente")) return "newton_raphson_web.html";
+        if (qn.includes("aitken") || qn.includes("acelerar") || qn.includes("mas rapido")) return "aceleracion_aitken_web.html";
+        if (qn.includes("g(x)") || qn.includes("x=g(x)") || qn.includes("punto fijo")) return "punto_fijo_web.html";
+        if (qn.includes("intervalo") || qn.includes("signo") || qn.includes("bolzano")) return "biseccion_web.html";
+        return "biseccion_web.html";
+      }
+
+      if (intent === "integracion") {
+        if (qn.includes("aleatorio") || qn.includes("incertidumbre") || qn.includes("varianza") || qn.includes("monte")) {
+          return "monte_carlo_web.html";
+        }
+        return "metodos_integral_web.html";
+      }
+
+      if (intent === "edo") return "ecuaciones_diferenciales_web.html";
+      if (intent === "interpolacion") return "interpolacion_web.html";
+      if (intent === "lineales") return "sistemas_lineales_web.html";
+      if (intent === "estocastico") return "monte_carlo_web.html";
+      return "biseccion_web.html";
+    }
+
+    function showClarifier(query) {
+      lastAmbiguousQuery = query;
+      clarifierEl.style.display = "flex";
+    }
+
+    function hideClarifier() {
+      clarifierEl.style.display = "none";
+      lastAmbiguousQuery = "";
+    }
+
+    function buildAdvice(query, forcedFile = null, forcedConfidence = null) {
+      const inf = inferMethod(query);
+      const file = forcedFile || inf.file;
+      const m = methods.find(x => x.file === file);
+
+      const common = [
+        "1) Verifica que los datos iniciales sean coherentes (intervalo, nodos, matriz o condicion inicial).",
+        "2) Corre el metodo y revisa la tabla iterativa para detectar errores tempranos.",
+        "3) Observa el grafico de convergencia: si el error no baja, cambia parametros.",
+        "4) Compara con otro metodo para validar estabilidad numerica."
+      ];
+
+      let specific = "";
+      if (file.includes("biseccion")) specific = "Para biseccion, comprueba que f(a) y f(b) tengan signos opuestos.";
+      if (file.includes("newton")) specific = "Para Newton, evita puntos donde la derivada sea cercana a cero.";
+      if (file.includes("punto_fijo")) specific = "Para punto fijo, revisa que la iteracion g(x) tienda a contraerse cerca de la solucion.";
+      if (file.includes("aitken")) specific = "Aitken acelera convergencia, pero puede fallar si el denominador es casi cero.";
+      if (file.includes("interpolacion")) specific = "En interpolacion, usa nodos bien distribuidos para reducir oscilaciones.";
+      if (file.includes("integral")) specific = "En integracion, prueba incrementar n para ver la tasa de convergencia.";
+      if (file.includes("monte_carlo")) specific = "En Monte Carlo, usa semilla fija y aumenta n para reducir varianza.";
+      if (file.includes("ecuaciones_diferenciales")) specific = "En EDO, compara Euler y RK4 para estimar error de discretizacion.";
+      if (file.includes("sistemas_lineales")) specific = "En sistemas lineales, valida residuo ||Ax-b|| y revisa diagonal/pivoteo.";
+
+      const matchedTxt = forcedFile
+        ? `aclaracion guiada del usuario (${forcedFile})`
+        : (inf.top.reasons.length
+          ? inf.top.reasons.join(" | ")
+          : "sin coincidencias claras");
+
+      const altTxt = inf.alternatives
+        .filter((a) => a.score > 0)
+        .map((a) => {
+          const mm = methods.find((x) => x.file === a.file);
+          return mm ? `- ${mm.name} (score ${a.score})` : "";
+        })
+        .filter(Boolean)
+        .join("\n");
+
+      const effectiveConfidence = forcedConfidence || inf.confidence;
+
+      const caution = (!forcedFile && (inf.confidence === "baja" || inf.ambiguous))
+        ? "Nota: tu consulta es ambigua. Te conviene responder una aclaracion corta: ¿tu problema es de raices, integracion, EDO, interpolacion o sistemas lineales?"
+        : "";
+
+      return {
+        file,
+        autoOpen: forcedFile ? true : !(inf.confidence === "baja" && inf.ambiguous),
+        text:
+`Metodo sugerido: ${m.name}
+Archivo recomendado: ${m.file}
+Confianza: ${effectiveConfidence}
+
+Coincidencias detectadas: ${matchedTxt}
+${caution}
+
+Consejo puntual: ${specific}
+
+Alternativas utiles:
+${altTxt || "- (sin alternativas fuertes detectadas)"}
+
+Plan de trabajo sugerido:
+${common.join("\n")}`
+      };
+    }
+
+    document.getElementById("btnSuggest").addEventListener("click", () => {
+      const q = promptEl.value.trim();
+      if (!q) {
+        answerEl.textContent = "Escribe una consulta para generar sugerencias.";
+        hideClarifier();
+        return;
+      }
+      const out = buildAdvice(q);
+      answerEl.textContent = out.text;
+      if (out.autoOpen) {
+        hideClarifier();
+        setActive(out.file);
+      } else {
+        showClarifier(q);
+      }
+    });
+
+    document.getElementById("btnClear").addEventListener("click", () => {
+      promptEl.value = "";
+      answerEl.textContent = "Escribe tu consulta y pulsa Sugerir.";
+      hideClarifier();
+    });
+
+    clarifierOptionsEl.querySelectorAll("button").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const intent = btn.dataset.intent;
+        const query = lastAmbiguousQuery || promptEl.value.trim();
+        const previous = inferMethod(query);
+        const chosenFile = chooseByIntent(intent, query);
+        const out = buildAdvice(query, chosenFile, "alta (aclarada)");
+        const prevMethod = methods.find((m) => m.file === previous.file);
+        const newMethod = methods.find((m) => m.file === chosenFile);
+
+        const changeBlock = previous.file === chosenFile
+          ? `Que cambio por la aclaracion:\n- El metodo sugerido se confirmo (${newMethod ? newMethod.name : chosenFile}).\n- La confianza subio a alta (aclarada).`
+          : `Que cambio por la aclaracion:\n- Metodo previo: ${prevMethod ? prevMethod.name : previous.file}.\n- Metodo actual: ${newMethod ? newMethod.name : chosenFile}.\n- La confianza subio a alta (aclarada).`;
+
+        answerEl.textContent = `${out.text}\n\nAclaracion aplicada: ${intent}.\n\n${changeBlock}`;
+        hideClarifier();
+        setActive(chosenFile);
+      });
+    });
+
+    document.querySelectorAll(".chip").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        promptEl.value = chip.dataset.q;
+      });
+    });
+</script>
+</body>
+</html>
