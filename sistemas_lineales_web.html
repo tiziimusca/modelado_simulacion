@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sistemas Lineales - Visualizador</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --card: #ffffff;
+      --line: #d7e1eb;
+      --text: #1f2937;
+      --muted: #64748b;
+      --primary: #0b7285;
+      --ok: #15803d;
+      --err: #b91c1c;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      color: var(--text);
+      background: linear-gradient(180deg, #eaf1f8 0%, var(--bg) 100%);
+    }
+    .container { max-width: 1280px; margin: 0 auto; padding: 20px; }
+    h1 { margin: 0 0 8px; }
+    .subtitle { margin: 0 0 16px; color: var(--muted); }
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.05);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(8, minmax(0, 1fr));
+      gap: 10px;
+      align-items: end;
+    }
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field.big { grid-column: span 3; }
+    label { font-size: 0.9rem; color: var(--muted); }
+    input {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 0.95rem;
+      background: #fff;
+    }
+    .help { font-size: 0.82rem; color: var(--muted); margin-top: 4px; }
+    .actions { margin-top: 12px; display: flex; gap: 10px; flex-wrap: wrap; }
+    button {
+      border: 0;
+      border-radius: 8px;
+      padding: 10px 14px;
+      cursor: pointer;
+      color: #fff;
+      background: var(--primary);
+      font-size: 0.95rem;
+    }
+    button.secondary { background: #475569; }
+    .chips { margin-top: 12px; display: flex; gap: 6px; flex-wrap: wrap; }
+    .chip {
+      background: #e6fcf5;
+      color: #087f5b;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 0.83rem;
+      cursor: pointer;
+    }
+    .status { margin-top: 10px; font-weight: 600; color: var(--muted); }
+    .status.ok { color: var(--ok); }
+    .status.error { color: var(--err); }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .box {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 12px;
+      background: #fcfdff;
+    }
+    .table-wrap { max-height: 320px; overflow: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.89rem; }
+    th, td { border-bottom: 1px solid var(--line); padding: 7px; text-align: right; }
+    th:first-child, td:first-child { text-align: center; }
+    @media (max-width: 980px) {
+      .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .field.big { grid-column: span 2; }
+      .row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Sistemas Lineales en HTML + JavaScript</h1>
+    <p class="subtitle">Ingresa A y b, visualiza eliminacion gaussiana, tabla de convergencia (Gauss-Seidel) y graficos.</p>
+
+    <section class="panel">
+      <div class="grid">
+        <div class="field big">
+          <label for="amat">Matriz A</label>
+          <input id="amat" value="2,1;1,-1" />
+          <div class="help">Formato: filas separadas por ; y columnas por ,</div>
+        </div>
+        <div class="field big">
+          <label for="bvec">Vector b</label>
+          <input id="bvec" value="10,2" />
+          <div class="help">Formato: valores separados por ,</div>
+        </div>
+        <div class="field">
+          <label for="tol">Tol. Gauss-Seidel</label>
+          <input id="tol" type="number" step="any" value="0.000001" />
+        </div>
+        <div class="field">
+          <label for="maxIter">Max iter GS</label>
+          <input id="maxIter" type="number" step="1" value="100" />
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="btnRun">Resolver</button>
+        <button id="btnClear" class="secondary">Limpiar</button>
+      </div>
+
+      <div class="chips">
+        <span class="chip" data-a="2,1;1,-1" data-b="10,2">Fisica</span>
+        <span class="chip" data-a="3,2;1,-2" data-b="18,0">Ingenieria</span>
+        <span class="chip" data-a="2,-1;1,1" data-b="8,12">Economia</span>
+        <span class="chip" data-a="5,2;2,3" data-b="17,14">Ciencia de datos</span>
+      </div>
+
+      <div id="status" class="status">Esperando ejecucion...</div>
+    </section>
+
+    <section class="panel row">
+      <div class="box">
+        <h3>Resumen</h3>
+        <div id="summary">Sin resultados por ahora.</div>
+      </div>
+      <div class="box">
+        <h3>Convergencia</h3>
+        <div id="meta">Sin datos.</div>
+      </div>
+    </section>
+
+    <section class="panel row">
+      <div>
+        <h3>Grafico (solo 2x2): rectas y solucion</h3>
+        <canvas id="chartLines"></canvas>
+      </div>
+      <div>
+        <h3>Residuo por iteracion (Gauss-Seidel)</h3>
+        <canvas id="chartRes"></canvas>
+      </div>
+    </section>
+
+    <section class="panel row">
+      <div>
+        <h3>Tabla de iteraciones (eliminacion gaussiana)</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Paso</th>
+                <th>k</th>
+                <th>Fila</th>
+                <th>Factor</th>
+                <th>Operacion</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyGauss"></tbody>
+          </table>
+        </div>
+      </div>
+      <div>
+        <h3>Tabla de convergencia (Gauss-Seidel)</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Iter</th>
+                <th>x</th>
+                <th>Norma residuo</th>
+                <th>Error inf</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyGS"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    let chartLines = null;
+    let chartRes = null;
+
+    function fmt(v) {
+      if (!Number.isFinite(v)) return "NaN";
+      return Number(v).toExponential(6);
+    }
+
+    function parseMatrix(text) {
+      const rows = text.split(";").map(r => r.trim()).filter(Boolean);
+      const A = rows.map(r => r.split(",").map(v => Number(v.trim())));
+      if (A.length === 0) throw new Error("Matriz A vacia.");
+      const n = A[0].length;
+      if (n === 0) throw new Error("Matriz A invalida.");
+      for (const row of A) {
+        if (row.length !== n) throw new Error("Todas las filas de A deben tener el mismo numero de columnas.");
+        if (row.some(v => !Number.isFinite(v))) throw new Error("A contiene valores invalidos.");
+      }
+      if (A.length !== n) throw new Error("A debe ser cuadrada.");
+      return A;
+    }
+
+    function parseVector(text) {
+      const b = text.split(",").map(v => Number(v.trim()));
+      if (b.length === 0 || b.some(v => !Number.isFinite(v))) throw new Error("Vector b invalido.");
+      return b;
+    }
+
+    function matVec(A, x) {
+      const n = A.length;
+      const y = new Array(n).fill(0);
+      for (let i = 0; i < n; i++) {
+        let s = 0;
+        for (let j = 0; j < n; j++) s += A[i][j] * x[j];
+        y[i] = s;
+      }
+      return y;
+    }
+
+    function norm2(v) {
+      let s = 0;
+      for (const x of v) s += x * x;
+      return Math.sqrt(s);
+    }
+
+    function normInf(v) {
+      let m = 0;
+      for (const x of v) m = Math.max(m, Math.abs(x));
+      return m;
+    }
+
+    function gaussianSolveWithSteps(Ain, bin) {
+      const n = Ain.length;
+      const A = Ain.map(r => r.slice());
+      const b = bin.slice();
+      const steps = [];
+      let stepId = 1;
+
+      for (let k = 0; k < n; k++) {
+        let piv = k;
+        for (let i = k + 1; i < n; i++) {
+          if (Math.abs(A[i][k]) > Math.abs(A[piv][k])) piv = i;
+        }
+        if (Math.abs(A[piv][k]) < 1e-12) throw new Error("Sistema singular o sin solucion unica.");
+
+        if (piv !== k) {
+          [A[k], A[piv]] = [A[piv], A[k]];
+          [b[k], b[piv]] = [b[piv], b[k]];
+          steps.push({ id: stepId++, k: k + 1, row: `${k + 1}<->${piv + 1}`, factor: NaN, op: `Intercambio F${k + 1} <-> F${piv + 1}` });
+        }
+
+        for (let i = k + 1; i < n; i++) {
+          const factor = A[i][k] / A[k][k];
+          for (let j = k; j < n; j++) A[i][j] -= factor * A[k][j];
+          b[i] -= factor * b[k];
+          steps.push({ id: stepId++, k: k + 1, row: i + 1, factor, op: `F${i + 1} = F${i + 1} - (${factor.toFixed(6)})*F${k + 1}` });
+        }
+      }
+
+      const x = new Array(n).fill(0);
+      for (let i = n - 1; i >= 0; i--) {
+        let s = 0;
+        for (let j = i + 1; j < n; j++) s += A[i][j] * x[j];
+        x[i] = (b[i] - s) / A[i][i];
+      }
+      return { x, steps };
+    }
+
+    function gaussSeidel(A, b, tol, maxIter) {
+      const n = A.length;
+      const x = new Array(n).fill(0);
+      const rows = [];
+
+      for (let it = 1; it <= maxIter; it++) {
+        const prev = x.slice();
+        for (let i = 0; i < n; i++) {
+          let s1 = 0, s2 = 0;
+          for (let j = 0; j < i; j++) s1 += A[i][j] * x[j];
+          for (let j = i + 1; j < n; j++) s2 += A[i][j] * prev[j];
+          if (Math.abs(A[i][i]) < 1e-12) throw new Error("Diagonal con cero: Gauss-Seidel no aplicable.");
+          x[i] = (b[i] - s1 - s2) / A[i][i];
+        }
+
+        const Ax = matVec(A, x);
+        const r = Ax.map((v, i) => v - b[i]);
+        const res = norm2(r);
+        const err = normInf(x.map((v, i) => v - prev[i]));
+        rows.push({ it, x: x.slice(), res, err });
+        if (err < tol) break;
+      }
+
+      return rows;
+    }
+
+    function fillGauss(steps) {
+      const tbody = document.getElementById("tbodyGauss");
+      tbody.innerHTML = "";
+      steps.forEach((s) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${s.id}</td>
+          <td>${s.k}</td>
+          <td>${s.row}</td>
+          <td>${Number.isFinite(s.factor) ? fmt(s.factor) : "-"}</td>
+          <td style="text-align:left">${s.op}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function fillGS(rows) {
+      const tbody = document.getElementById("tbodyGS");
+      tbody.innerHTML = "";
+      rows.forEach((r) => {
+        const tr = document.createElement("tr");
+        const xTxt = "[" + r.x.map(v => Number(v).toFixed(6)).join(", ") + "]";
+        tr.innerHTML = `
+          <td>${r.it}</td>
+          <td style="text-align:left">${xTxt}</td>
+          <td>${fmt(r.res)}</td>
+          <td>${fmt(r.err)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function drawResidual(rows) {
+      const pts = rows.map(r => ({ x: r.it, y: Math.max(r.res, 1e-16) }));
+      if (chartRes) chartRes.destroy();
+      chartRes = new Chart(document.getElementById("chartRes"), {
+        type: "line",
+        data: {
+          datasets: [{
+            label: "||Ax-b||_2",
+            data: pts,
+            borderColor: "#c92a2a",
+            backgroundColor: "rgba(201,42,42,0.15)",
+            fill: true,
+            pointRadius: 3,
+            tension: 0.15
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: { type: "linear", ticks: { precision: 0 }, title: { display: true, text: "Iteracion" } },
+            y: { type: "logarithmic", title: { display: true, text: "Residuo (log)" } }
+          }
+        }
+      });
+    }
+
+    function draw2x2(A, b, xsol) {
+      if (A.length !== 2) {
+        if (chartLines) { chartLines.destroy(); chartLines = null; }
+        return;
+      }
+      const xs = [];
+      const x0 = xsol[0] - 6;
+      const x1 = xsol[0] + 6;
+      const n = 200;
+      const step = (x1 - x0) / (n - 1);
+      for (let i = 0; i < n; i++) xs.push(x0 + i * step);
+
+      const line1 = [];
+      const line2 = [];
+      for (const x of xs) {
+        if (Math.abs(A[0][1]) > 1e-12) line1.push({ x, y: (b[0] - A[0][0] * x) / A[0][1] });
+        if (Math.abs(A[1][1]) > 1e-12) line2.push({ x, y: (b[1] - A[1][0] * x) / A[1][1] });
+      }
+
+      if (chartLines) chartLines.destroy();
+      chartLines = new Chart(document.getElementById("chartLines"), {
+        type: "scatter",
+        data: {
+          datasets: [
+            { type: "line", label: "Ecuacion 1", data: line1, borderColor: "#1971c2", pointRadius: 0, borderWidth: 2 },
+            { type: "line", label: "Ecuacion 2", data: line2, borderColor: "#2b8a3e", pointRadius: 0, borderWidth: 2 },
+            { label: "Solucion", data: [{ x: xsol[0], y: xsol[1] }], backgroundColor: "#e03131", pointRadius: 5 }
+          ]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: { type: "linear", title: { display: true, text: "x" } },
+            y: { type: "linear", title: { display: true, text: "y" } }
+          }
+        }
+      });
+    }
+
+    function run() {
+      const status = document.getElementById("status");
+      const summary = document.getElementById("summary");
+      const meta = document.getElementById("meta");
+
+      try {
+        const A = parseMatrix(document.getElementById("amat").value.trim());
+        const b = parseVector(document.getElementById("bvec").value.trim());
+        const tol = Number(document.getElementById("tol").value);
+        const maxIter = Math.floor(Number(document.getElementById("maxIter").value));
+
+        if (b.length !== A.length) throw new Error("Dimension incompatible: b debe tener el mismo tamaño que A.");
+        if (!(tol > 0) || !(maxIter > 0)) throw new Error("Tol y max iter deben ser positivos.");
+
+        const g = gaussianSolveWithSteps(A, b);
+        const gsRows = gaussSeidel(A, b, tol, maxIter);
+        if (gsRows.length === 0) throw new Error("Gauss-Seidel no genero iteraciones.");
+
+        const Ax = matVec(A, g.x);
+        const resFinal = norm2(Ax.map((v, i) => v - b[i]));
+        const lastGS = gsRows[gsRows.length - 1];
+
+        fillGauss(g.steps);
+        fillGS(gsRows);
+        drawResidual(gsRows);
+        draw2x2(A, b, g.x);
+
+        summary.innerHTML = `
+          <p><strong>Dimension:</strong> ${A.length}x${A.length}</p>
+          <p><strong>Solucion Gauss:</strong> [${g.x.map(v => Number(v).toFixed(8)).join(", ")}]</p>
+          <p><strong>Residuo final Gauss:</strong> ${fmt(resFinal)}</p>
+        `;
+
+        meta.innerHTML = `
+          <p><strong>Iteraciones GS:</strong> ${gsRows.length}</p>
+          <p><strong>Residuo final GS:</strong> ${fmt(lastGS.res)}</p>
+          <p><strong>Error inf final GS:</strong> ${fmt(lastGS.err)}</p>
+        `;
+
+        status.textContent = "Resolucion completada correctamente.";
+        status.className = "status ok";
+      } catch (e) {
+        status.textContent = "Error: " + e.message;
+        status.className = "status error";
+      }
+    }
+
+    function clearAll() {
+      document.getElementById("tbodyGauss").innerHTML = "";
+      document.getElementById("tbodyGS").innerHTML = "";
+      document.getElementById("summary").textContent = "Sin resultados por ahora.";
+      document.getElementById("meta").textContent = "Sin datos.";
+      document.getElementById("status").textContent = "Limpio. Listo para una nueva ejecucion.";
+      document.getElementById("status").className = "status";
+      if (chartLines) { chartLines.destroy(); chartLines = null; }
+      if (chartRes) { chartRes.destroy(); chartRes = null; }
+    }
+
+    document.getElementById("btnRun").addEventListener("click", run);
+    document.getElementById("btnClear").addEventListener("click", clearAll);
+
+    document.querySelectorAll(".chip").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        document.getElementById("amat").value = chip.dataset.a;
+        document.getElementById("bvec").value = chip.dataset.b;
+      });
+    });
+  </script>
+</body>
+</html>

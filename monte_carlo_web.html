@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Monte Carlo 1D - Visualizador</title>
+  <script src="https://cdn.jsdelivr.net/npm/mathjs@12.4.1/lib/browser/math.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --card: #ffffff;
+      --line: #d7e1eb;
+      --text: #1f2937;
+      --muted: #64748b;
+      --primary: #0b7285;
+      --ok: #15803d;
+      --err: #b91c1c;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      color: var(--text);
+      background: linear-gradient(180deg, #eaf1f8 0%, var(--bg) 100%);
+    }
+    .container {
+      max-width: 1260px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    h1 { margin: 0 0 8px; }
+    .subtitle { margin: 0 0 16px; color: var(--muted); }
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.05);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 10px;
+      align-items: end;
+    }
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field.func { grid-column: span 2; }
+    label { font-size: 0.9rem; color: var(--muted); }
+    input {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 0.95rem;
+      background: #fff;
+    }
+    .actions { margin-top: 12px; display: flex; gap: 10px; flex-wrap: wrap; }
+    button {
+      border: 0;
+      border-radius: 8px;
+      padding: 10px 14px;
+      cursor: pointer;
+      color: #fff;
+      background: var(--primary);
+      font-size: 0.95rem;
+    }
+    button.secondary { background: #475569; }
+    .chips { margin-top: 12px; display: flex; gap: 6px; flex-wrap: wrap; }
+    .chip {
+      background: #e6fcf5;
+      color: #087f5b;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 0.83rem;
+      cursor: pointer;
+    }
+    .status { margin-top: 10px; font-weight: 600; color: var(--muted); }
+    .status.ok { color: var(--ok); }
+    .status.error { color: var(--err); }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .box {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 12px;
+      background: #fcfdff;
+    }
+    .table-wrap { max-height: 340px; overflow: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.89rem; }
+    th, td { border-bottom: 1px solid var(--line); padding: 7px; text-align: right; }
+    th:first-child, td:first-child { text-align: center; }
+    @media (max-width: 980px) {
+      .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .field.func { grid-column: span 2; }
+      .row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Integracion Monte Carlo 1D</h1>
+    <p class="subtitle">Ingresa f(x), intervalo y configuracion de muestreo para ver iteraciones, tabla de convergencia y graficos.</p>
+
+    <section class="panel">
+      <div class="grid">
+        <div class="field func">
+          <label for="fexpr">Funcion f(x)</label>
+          <input id="fexpr" value="exp(-x^2)" />
+        </div>
+        <div class="field">
+          <label for="a">a</label>
+          <input id="a" type="number" step="any" value="0" />
+        </div>
+        <div class="field">
+          <label for="b">b</label>
+          <input id="b" type="number" step="any" value="1" />
+        </div>
+        <div class="field">
+          <label for="n0">n inicial</label>
+          <input id="n0" type="number" step="1" value="200" />
+        </div>
+        <div class="field">
+          <label for="nmax">n max</label>
+          <input id="nmax" type="number" step="1" value="10000" />
+        </div>
+        <div class="field">
+          <label for="seed">Semilla</label>
+          <input id="seed" type="number" step="1" value="2026" />
+        </div>
+      </div>
+      <div class="actions">
+        <button id="btnRun">Simular</button>
+        <button id="btnClear" class="secondary">Limpiar</button>
+      </div>
+      <div class="chips">
+        <span class="chip" data-f="exp(-x^2)" data-a="0" data-b="1">exp(-x^2) en [0,1]</span>
+        <span class="chip" data-f="sin(x)" data-a="0" data-b="3.14159265359">sin(x) en [0,pi]</span>
+        <span class="chip" data-f="x^2 + 1" data-a="-1" data-b="2">x^2+1 en [-1,2]</span>
+      </div>
+      <div id="status" class="status">Esperando ejecucion...</div>
+    </section>
+
+    <section class="panel row">
+      <div class="box">
+        <h3>Resumen</h3>
+        <div id="summary">Sin resultados por ahora.</div>
+      </div>
+      <div class="box">
+        <h3>Convergencia</h3>
+        <div id="meta">Sin datos.</div>
+      </div>
+    </section>
+
+    <section class="panel row">
+      <div>
+        <h3>f(x) y muestras aleatorias</h3>
+        <canvas id="chartMain"></canvas>
+      </div>
+      <div>
+        <h3>Convergencia de la estimacion e IC95%</h3>
+        <canvas id="chartConv"></canvas>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>Tabla de iteraciones / convergencia</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>k</th>
+              <th>n</th>
+              <th>f_promedio</th>
+              <th>Area aprox</th>
+              <th>Sigma</th>
+              <th>EE area</th>
+              <th>IC95 inf</th>
+              <th>IC95 sup</th>
+              <th>Error abs</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    let chartMain = null;
+    let chartConv = null;
+
+    function fmt(v) {
+      if (!Number.isFinite(v)) return "NaN";
+      return Number(v).toExponential(6);
+    }
+
+    function parseF(expr) {
+      return function (x) {
+        return math.evaluate(expr, { x: x, pi: Math.PI, e: Math.E });
+      };
+    }
+
+    // PRNG reproducible (LCG) para que la semilla funcione igual cada corrida.
+    function createRng(seed) {
+      let s = (Math.floor(seed) >>> 0) || 123456789;
+      return function () {
+        s = (1664525 * s + 1013904223) >>> 0;
+        return s / 4294967296;
+      };
+    }
+
+    function simpsonRef(f, a, b, n = 4000) {
+      let nn = Math.max(2, Math.floor(n));
+      if (nn % 2 !== 0) nn += 1;
+      const h = (b - a) / nn;
+      let sum = f(a) + f(b);
+      for (let i = 1; i < nn; i++) {
+        const x = a + i * h;
+        sum += (i % 2 === 0 ? 2 : 4) * f(x);
+      }
+      return (h / 3) * sum;
+    }
+
+    function mcOneRun(f, a, b, n, rng) {
+      const ys = new Array(n);
+      const xs = new Array(n);
+      let sum = 0;
+      for (let i = 0; i < n; i++) {
+        const x = a + (b - a) * rng();
+        const y = f(x);
+        if (!Number.isFinite(y)) {
+          throw new Error("f(x) no es finita en alguna muestra aleatoria.");
+        }
+        xs[i] = x;
+        ys[i] = y;
+        sum += y;
+      }
+      const mean = sum / n;
+      let varSum = 0;
+      for (let i = 0; i < n; i++) {
+        const d = ys[i] - mean;
+        varSum += d * d;
+      }
+      const sigma = n > 1 ? Math.sqrt(varSum / (n - 1)) : 0;
+      const volume = b - a;
+      const area = volume * mean;
+      const ee = sigma / Math.sqrt(n);
+      const eeArea = volume * ee;
+      const z95 = 1.96;
+      const ic95 = [area - z95 * eeArea, area + z95 * eeArea];
+      return { n, area, mean, sigma, eeArea, ic95, xs, ys };
+    }
+
+    function runSeries(f, a, b, n0, nmax, seed) {
+      const rng = createRng(seed);
+      const rows = [];
+      let n = Math.max(10, Math.floor(n0));
+      const nLimit = Math.max(n, Math.floor(nmax));
+
+      while (n <= nLimit) {
+        rows.push(mcOneRun(f, a, b, n, rng));
+        const nextN = n * 2;
+        if (nextN === n) break;
+        n = nextN;
+      }
+      return rows;
+    }
+
+    function fillTable(rows, ref) {
+      const tbody = document.getElementById("tbody");
+      tbody.innerHTML = "";
+      rows.forEach((r, idx) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${idx + 1}</td>
+          <td>${r.n}</td>
+          <td>${fmt(r.mean)}</td>
+          <td>${fmt(r.area)}</td>
+          <td>${fmt(r.sigma)}</td>
+          <td>${fmt(r.eeArea)}</td>
+          <td>${fmt(r.ic95[0])}</td>
+          <td>${fmt(r.ic95[1])}</td>
+          <td>${fmt(Math.abs(ref - r.area))}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function drawMain(f, a, b, lastRow) {
+      const nCurve = 320;
+      const step = (b - a) / (nCurve - 1);
+      const curve = [];
+      for (let i = 0; i < nCurve; i++) {
+        const x = a + i * step;
+        const y = f(x);
+        if (Number.isFinite(y)) curve.push({ x, y });
+      }
+
+      const showPts = Math.min(1200, lastRow.xs.length);
+      const pts = [];
+      for (let i = 0; i < showPts; i++) {
+        pts.push({ x: lastRow.xs[i], y: lastRow.ys[i] });
+      }
+
+      if (chartMain) chartMain.destroy();
+      chartMain = new Chart(document.getElementById("chartMain"), {
+        type: "scatter",
+        data: {
+          datasets: [
+            {
+              type: "line",
+              label: "f(x)",
+              data: curve,
+              borderColor: "#0b7285",
+              borderWidth: 2,
+              pointRadius: 0
+            },
+            {
+              label: "Muestras",
+              data: pts,
+              backgroundColor: "#e8590c",
+              pointRadius: 2
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: { type: "linear", title: { display: true, text: "x" } },
+            y: { title: { display: true, text: "f(x)" } }
+          }
+        }
+      });
+    }
+
+    function drawConvergence(rows, ref) {
+      const est = rows.map((r) => ({ x: r.n, y: r.area }));
+      const lo = rows.map((r) => ({ x: r.n, y: r.ic95[0] }));
+      const hi = rows.map((r) => ({ x: r.n, y: r.ic95[1] }));
+      const refLine = rows.map((r) => ({ x: r.n, y: ref }));
+
+      if (chartConv) chartConv.destroy();
+      chartConv = new Chart(document.getElementById("chartConv"), {
+        type: "line",
+        data: {
+          datasets: [
+            {
+              label: "Area estimada",
+              data: est,
+              borderColor: "#1971c2",
+              pointRadius: 3,
+              tension: 0.1
+            },
+            {
+              label: "IC95 inferior",
+              data: lo,
+              borderColor: "#94a3b8",
+              pointRadius: 0,
+              borderDash: [6, 4]
+            },
+            {
+              label: "IC95 superior",
+              data: hi,
+              borderColor: "#94a3b8",
+              pointRadius: 0,
+              borderDash: [6, 4]
+            },
+            {
+              label: "Referencia",
+              data: refLine,
+              borderColor: "#2b8a3e",
+              pointRadius: 0,
+              borderWidth: 2
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: { type: "logarithmic", title: { display: true, text: "n (log)" } },
+            y: { title: { display: true, text: "Area" } }
+          }
+        }
+      });
+    }
+
+    function run() {
+      const status = document.getElementById("status");
+      const summary = document.getElementById("summary");
+      const meta = document.getElementById("meta");
+
+      try {
+        const expr = document.getElementById("fexpr").value.trim();
+        const a = Number(document.getElementById("a").value);
+        const b = Number(document.getElementById("b").value);
+        const n0 = Number(document.getElementById("n0").value);
+        const nmax = Number(document.getElementById("nmax").value);
+        const seed = Number(document.getElementById("seed").value);
+
+        if (!expr) throw new Error("Ingresa una funcion f(x).");
+        if (!Number.isFinite(a) || !Number.isFinite(b) || !(a < b)) throw new Error("Debe cumplirse a < b.");
+        if (!(n0 > 0) || !(nmax >= n0)) throw new Error("Revisa n inicial y n max.");
+
+        const f = parseF(expr);
+        const ref = simpsonRef(f, a, b, 4000);
+        if (!Number.isFinite(ref)) throw new Error("No se pudo calcular referencia numerica.");
+
+        const rows = runSeries(f, a, b, n0, nmax, seed);
+        const last = rows[rows.length - 1];
+
+        fillTable(rows, ref);
+        drawMain(f, a, b, last);
+        drawConvergence(rows, ref);
+
+        const finalErr = Math.abs(ref - last.area);
+        summary.innerHTML = `
+          <p><strong>f(x):</strong> ${expr}</p>
+          <p><strong>Area final (n=${last.n}):</strong> ${fmt(last.area)}</p>
+          <p><strong>IC95 final:</strong> [${fmt(last.ic95[0])}, ${fmt(last.ic95[1])}]</p>
+        `;
+
+        meta.innerHTML = `
+          <p><strong>Referencia:</strong> ${fmt(ref)}</p>
+          <p><strong>Error absoluto final:</strong> ${fmt(finalErr)}</p>
+          <p><strong>Iteraciones (niveles n):</strong> ${rows.length}</p>
+        `;
+
+        status.textContent = "Simulacion completada correctamente.";
+        status.className = "status ok";
+      } catch (e) {
+        status.textContent = "Error: " + e.message;
+        status.className = "status error";
+      }
+    }
+
+    function clearAll() {
+      document.getElementById("tbody").innerHTML = "";
+      document.getElementById("summary").textContent = "Sin resultados por ahora.";
+      document.getElementById("meta").textContent = "Sin datos.";
+      document.getElementById("status").textContent = "Limpio. Listo para una nueva ejecucion.";
+      document.getElementById("status").className = "status";
+      if (chartMain) { chartMain.destroy(); chartMain = null; }
+      if (chartConv) { chartConv.destroy(); chartConv = null; }
+    }
+
+    document.getElementById("btnRun").addEventListener("click", run);
+    document.getElementById("btnClear").addEventListener("click", clearAll);
+
+    document.querySelectorAll(".chip").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        document.getElementById("fexpr").value = chip.dataset.f;
+        document.getElementById("a").value = chip.dataset.a;
+        document.getElementById("b").value = chip.dataset.b;
+      });
+    });
+  </script>
+</body>
+</html>

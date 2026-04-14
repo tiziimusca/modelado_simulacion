@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EDO - Euler y RK4</title>
+  <script src="https://cdn.jsdelivr.net/npm/mathjs@12.4.1/lib/browser/math.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --card: #ffffff;
+      --line: #d7e1eb;
+      --text: #1f2937;
+      --muted: #64748b;
+      --primary: #0b7285;
+      --ok: #15803d;
+      --err: #b91c1c;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      color: var(--text);
+      background: linear-gradient(180deg, #eaf1f8 0%, var(--bg) 100%);
+    }
+    .container {
+      max-width: 1260px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    h1 { margin: 0 0 8px; }
+    .subtitle { margin: 0 0 16px; color: var(--muted); }
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.05);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(8, minmax(0, 1fr));
+      gap: 10px;
+      align-items: end;
+    }
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field.func { grid-column: span 3; }
+    label { font-size: 0.9rem; color: var(--muted); }
+    input, select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 0.95rem;
+      background: #fff;
+    }
+    .actions { margin-top: 12px; display: flex; gap: 10px; flex-wrap: wrap; }
+    button {
+      border: 0;
+      border-radius: 8px;
+      padding: 10px 14px;
+      cursor: pointer;
+      color: #fff;
+      background: var(--primary);
+      font-size: 0.95rem;
+    }
+    button.secondary { background: #475569; }
+    .chips { margin-top: 12px; display: flex; gap: 6px; flex-wrap: wrap; }
+    .chip {
+      background: #e6fcf5;
+      color: #087f5b;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 0.83rem;
+      cursor: pointer;
+    }
+    .status { margin-top: 10px; font-weight: 600; color: var(--muted); }
+    .status.ok { color: var(--ok); }
+    .status.error { color: var(--err); }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .box {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 12px;
+      background: #fcfdff;
+    }
+    .table-wrap { max-height: 340px; overflow: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.89rem; }
+    th, td { border-bottom: 1px solid var(--line); padding: 7px; text-align: right; }
+    th:first-child, td:first-child { text-align: center; }
+    @media (max-width: 980px) {
+      .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .field.func { grid-column: span 2; }
+      .row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Ecuaciones Diferenciales (Euler y RK4)</h1>
+    <p class="subtitle">Ingresa f(t,y), condiciones iniciales y paso h para ver iteraciones, convergencia y graficos.</p>
+
+    <section class="panel">
+      <div class="grid">
+        <div class="field func">
+          <label for="fexpr">f(t,y)</label>
+          <input id="fexpr" value="-0.4*(y-20)" />
+        </div>
+        <div class="field">
+          <label for="t0">t0</label>
+          <input id="t0" type="number" step="any" value="0" />
+        </div>
+        <div class="field">
+          <label for="y0">y0</label>
+          <input id="y0" type="number" step="any" value="90" />
+        </div>
+        <div class="field">
+          <label for="tf">tf</label>
+          <input id="tf" type="number" step="any" value="10" />
+        </div>
+        <div class="field">
+          <label for="h">h</label>
+          <input id="h" type="number" step="any" value="0.25" />
+        </div>
+        <div class="field">
+          <label for="method">Metodo tabla</label>
+          <select id="method">
+            <option value="euler">Euler</option>
+            <option value="rk4">RK4</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="hmin">h minimo (conv.)</label>
+          <input id="hmin" type="number" step="any" value="0.015625" />
+        </div>
+      </div>
+      <div class="actions">
+        <button id="btnRun">Resolver</button>
+        <button id="btnClear" class="secondary">Limpiar</button>
+      </div>
+      <div class="chips">
+        <span class="chip" data-f="-0.4*(y-20)" data-y0="90" data-tf="10">Enfriamiento</span>
+        <span class="chip" data-f="(5-y)/2" data-y0="0" data-tf="10">Capacitor RC</span>
+        <span class="chip" data-f="-2*(y-0.03)" data-y0="0.6" data-tf="5">Optimizacion</span>
+      </div>
+      <div id="status" class="status">Esperando ejecucion...</div>
+    </section>
+
+    <section class="panel row">
+      <div class="box">
+        <h3>Resumen</h3>
+        <div id="summary">Sin resultados por ahora.</div>
+      </div>
+      <div class="box">
+        <h3>Convergencia</h3>
+        <div id="meta">Sin datos.</div>
+      </div>
+    </section>
+
+    <section class="panel row">
+      <div>
+        <h3>Solucion y(t): Euler vs RK4</h3>
+        <canvas id="chartMain"></canvas>
+      </div>
+      <div>
+        <h3>Error final vs h</h3>
+        <canvas id="chartConv"></canvas>
+      </div>
+    </section>
+
+    <section class="panel row">
+      <div>
+        <h3>Tabla de iteraciones (metodo seleccionado)</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>i</th>
+                <th>t_i</th>
+                <th>y_i</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyIter"></tbody>
+          </table>
+        </div>
+      </div>
+      <div>
+        <h3>Tabla de convergencia por paso</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>h</th>
+                <th>y(tf) Euler</th>
+                <th>y(tf) RK4</th>
+                <th>|Euler-RK4|</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyConv"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    let chartMain = null;
+    let chartConv = null;
+
+    function fmt(v) {
+      if (!Number.isFinite(v)) return "NaN";
+      return Number(v).toExponential(6);
+    }
+
+    function parseF(expr) {
+      return function (t, y) {
+        return math.evaluate(expr, { t: t, y: y, pi: Math.PI, e: Math.E });
+      };
+    }
+
+    function euler(f, t0, y0, tf, h) {
+      const n = Math.max(1, Math.ceil((tf - t0) / h));
+      const ts = new Array(n + 1);
+      const ys = new Array(n + 1);
+      ts[0] = t0;
+      ys[0] = y0;
+      for (let i = 0; i < n; i++) {
+        ts[i + 1] = ts[i] + h;
+        ys[i + 1] = ys[i] + h * f(ts[i], ys[i]);
+      }
+      return { ts, ys };
+    }
+
+    function rk4(f, t0, y0, tf, h) {
+      const n = Math.max(1, Math.ceil((tf - t0) / h));
+      const ts = new Array(n + 1);
+      const ys = new Array(n + 1);
+      ts[0] = t0;
+      ys[0] = y0;
+      for (let i = 0; i < n; i++) {
+        const t = ts[i];
+        const y = ys[i];
+        const k1 = f(t, y);
+        const k2 = f(t + h / 2, y + h * k1 / 2);
+        const k3 = f(t + h / 2, y + h * k2 / 2);
+        const k4 = f(t + h, y + h * k3);
+        ts[i + 1] = t + h;
+        ys[i + 1] = y + (h / 6) * (k1 + 2 * k2 + 2 * k3 + k4);
+      }
+      return { ts, ys };
+    }
+
+    function fillIter(ts, ys) {
+      const tbody = document.getElementById("tbodyIter");
+      tbody.innerHTML = "";
+      for (let i = 0; i < ts.length; i++) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${i}</td><td>${fmt(ts[i])}</td><td>${fmt(ys[i])}</td>`;
+        tbody.appendChild(tr);
+      }
+    }
+
+    function fillConv(rows) {
+      const tbody = document.getElementById("tbodyConv");
+      tbody.innerHTML = "";
+      rows.forEach((r) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${fmt(r.h)}</td><td>${fmt(r.yE)}</td><td>${fmt(r.yR)}</td><td>${fmt(r.err)}</td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function drawMain(tsE, ysE, tsR, ysR) {
+      const ePts = tsE.map((t, i) => ({ x: t, y: ysE[i] }));
+      const rPts = tsR.map((t, i) => ({ x: t, y: ysR[i] }));
+
+      if (chartMain) chartMain.destroy();
+      chartMain = new Chart(document.getElementById("chartMain"), {
+        type: "line",
+        data: {
+          datasets: [
+            {
+              label: "Euler",
+              data: ePts,
+              borderColor: "#1971c2",
+              pointRadius: 2,
+              tension: 0.1
+            },
+            {
+              label: "RK4",
+              data: rPts,
+              borderColor: "#2b8a3e",
+              pointRadius: 0,
+              borderWidth: 2
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: { type: "linear", title: { display: true, text: "t" } },
+            y: { title: { display: true, text: "y(t)" } }
+          }
+        }
+      });
+    }
+
+    function drawConv(rows) {
+      const pts = rows.map((r) => ({ x: r.h, y: Math.max(r.err, 1e-16) }));
+      if (chartConv) chartConv.destroy();
+      chartConv = new Chart(document.getElementById("chartConv"), {
+        type: "line",
+        data: {
+          datasets: [{
+            label: "Error final |Euler-RK4|",
+            data: pts,
+            borderColor: "#c92a2a",
+            backgroundColor: "rgba(201, 42, 42, 0.16)",
+            fill: true,
+            pointRadius: 3,
+            tension: 0.15
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: { type: "logarithmic", reverse: true, title: { display: true, text: "h (log)" } },
+            y: { type: "logarithmic", title: { display: true, text: "Error (log)" } }
+          }
+        }
+      });
+    }
+
+    function run() {
+      const status = document.getElementById("status");
+      const summary = document.getElementById("summary");
+      const meta = document.getElementById("meta");
+
+      try {
+        const expr = document.getElementById("fexpr").value.trim();
+        const t0 = Number(document.getElementById("t0").value);
+        const y0 = Number(document.getElementById("y0").value);
+        const tf = Number(document.getElementById("tf").value);
+        const h = Number(document.getElementById("h").value);
+        const hmin = Number(document.getElementById("hmin").value);
+        const method = document.getElementById("method").value;
+
+        if (!expr) throw new Error("Ingresa una funcion f(t,y).");
+        if (!Number.isFinite(t0) || !Number.isFinite(tf) || !(tf > t0)) throw new Error("Debe cumplirse tf > t0.");
+        if (!Number.isFinite(y0)) throw new Error("y0 debe ser valido.");
+        if (!(h > 0) || !(hmin > 0)) throw new Error("h y h minimo deben ser positivos.");
+        if (hmin > h) throw new Error("h minimo debe ser menor o igual a h.");
+
+        const f = parseF(expr);
+        const outE = euler(f, t0, y0, tf, h);
+        const outR = rk4(f, t0, y0, tf, h);
+
+        if (outE.ys.some((v) => !Number.isFinite(v)) || outR.ys.some((v) => !Number.isFinite(v))) {
+          throw new Error("La solucion genero valores no finitos. Ajusta funcion o parametros.");
+        }
+
+        const rowsConv = [];
+        let hh = h;
+        while (hh >= hmin - 1e-15) {
+          const e = euler(f, t0, y0, tf, hh);
+          const r = rk4(f, t0, y0, tf, hh);
+          const yE = e.ys[e.ys.length - 1];
+          const yR = r.ys[r.ys.length - 1];
+          rowsConv.push({ h: hh, yE, yR, err: Math.abs(yE - yR) });
+          hh = hh / 2;
+          if (rowsConv.length > 16) break;
+        }
+
+        const show = method === "euler" ? outE : outR;
+        fillIter(show.ts, show.ys);
+        fillConv(rowsConv);
+        drawMain(outE.ts, outE.ys, outR.ts, outR.ys);
+        drawConv(rowsConv);
+
+        const finalE = outE.ys[outE.ys.length - 1];
+        const finalR = outR.ys[outR.ys.length - 1];
+        const finalErr = Math.abs(finalE - finalR);
+
+        summary.innerHTML = `
+          <p><strong>f(t,y):</strong> ${expr}</p>
+          <p><strong>y(tf) Euler:</strong> ${fmt(finalE)}</p>
+          <p><strong>y(tf) RK4:</strong> ${fmt(finalR)}</p>
+        `;
+
+        meta.innerHTML = `
+          <p><strong>Error final |Euler-RK4|:</strong> ${fmt(finalErr)}</p>
+          <p><strong>Pasos en convergencia:</strong> ${rowsConv.length}</p>
+          <p><strong>Metodo mostrado en tabla:</strong> ${method}</p>
+        `;
+
+        status.textContent = "Resolucion completada correctamente.";
+        status.className = "status ok";
+      } catch (e) {
+        status.textContent = "Error: " + e.message;
+        status.className = "status error";
+      }
+    }
+
+    function clearAll() {
+      document.getElementById("tbodyIter").innerHTML = "";
+      document.getElementById("tbodyConv").innerHTML = "";
+      document.getElementById("summary").textContent = "Sin resultados por ahora.";
+      document.getElementById("meta").textContent = "Sin datos.";
+      document.getElementById("status").textContent = "Limpio. Listo para una nueva ejecucion.";
+      document.getElementById("status").className = "status";
+      if (chartMain) { chartMain.destroy(); chartMain = null; }
+      if (chartConv) { chartConv.destroy(); chartConv = null; }
+    }
+
+    document.getElementById("btnRun").addEventListener("click", run);
+    document.getElementById("btnClear").addEventListener("click", clearAll);
+
+    document.querySelectorAll(".chip").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        document.getElementById("fexpr").value = chip.dataset.f;
+        document.getElementById("y0").value = chip.dataset.y0;
+        document.getElementById("tf").value = chip.dataset.tf;
+      });
+    });
+  </script>
+</body>
+</html>

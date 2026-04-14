@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Newton-Raphson Web</title>
+  <script src="https://cdn.jsdelivr.net/npm/mathjs@12.4.1/lib/browser/math.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #f3f7fb;
+      --card: #ffffff;
+      --ink: #1f2937;
+      --muted: #64748b;
+      --line: #d7e0ea;
+      --primary: #155e75;
+      --ok: #15803d;
+      --err: #b91c1c;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      color: var(--ink);
+      background: linear-gradient(180deg, #eaf2fb 0%, var(--bg) 100%);
+    }
+
+    .container {
+      max-width: 1220px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 1.8rem;
+    }
+
+    .subtitle {
+      margin: 0 0 16px;
+      color: var(--muted);
+    }
+
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.05);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 10px;
+      align-items: end;
+    }
+
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field.func { grid-column: span 2; }
+
+    label { font-size: 0.9rem; color: var(--muted); }
+
+    input {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 0.95rem;
+    }
+
+    .actions {
+      margin-top: 12px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: 0;
+      border-radius: 8px;
+      padding: 10px 14px;
+      cursor: pointer;
+      color: #fff;
+      background: var(--primary);
+      font-size: 0.95rem;
+    }
+
+    button.secondary { background: #475569; }
+
+    .chips { margin-top: 12px; display: flex; gap: 6px; flex-wrap: wrap; }
+    .chip {
+      background: #e6fcf5;
+      color: #0f766e;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 0.83rem;
+      cursor: pointer;
+    }
+
+    .status { margin-top: 10px; font-weight: 600; color: var(--muted); }
+    .status.ok { color: var(--ok); }
+    .status.error { color: var(--err); }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .box {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 12px;
+      background: #fcfdff;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    th, td {
+      border-bottom: 1px solid var(--line);
+      padding: 7px;
+      text-align: right;
+    }
+
+    th:first-child, td:first-child { text-align: center; }
+
+    .table-wrap { max-height: 360px; overflow: auto; }
+
+    @media (max-width: 920px) {
+      .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .field.func { grid-column: span 2; }
+      .row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Metodo de Newton-Raphson en HTML + JavaScript</h1>
+    <p class="subtitle">Ingresa f(x), x0 y parametros para ver iteraciones, tabla de convergencia y graficos.</p>
+
+    <section class="panel">
+      <div class="grid">
+        <div class="field func">
+          <label for="fexpr">Funcion f(x)</label>
+          <input id="fexpr" value="x^3 - x - 2" />
+        </div>
+        <div class="field">
+          <label for="x0">x0</label>
+          <input id="x0" type="number" step="any" value="1.5" />
+        </div>
+        <div class="field">
+          <label for="tol">Tolerancia</label>
+          <input id="tol" type="number" step="any" value="0.00000001" />
+        </div>
+        <div class="field">
+          <label for="maxIter">Max. iteraciones</label>
+          <input id="maxIter" type="number" step="1" value="50" />
+        </div>
+        <div class="field">
+          <label for="h">Paso derivada (h)</label>
+          <input id="h" type="number" step="any" value="0.000001" />
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="btnRun">Resolver</button>
+        <button id="btnClear" class="secondary">Limpiar</button>
+      </div>
+
+      <div class="chips">
+        <span class="chip" data-f="x^3 - x - 2" data-x0="1.5">x^3 - x - 2</span>
+        <span class="chip" data-f="cos(x) - x" data-x0="0.7">cos(x) - x</span>
+        <span class="chip" data-f="exp(-x) - x" data-x0="0.5">exp(-x) - x</span>
+        <span class="chip" data-f="x^2 - 3" data-x0="1.8">x^2 - 3</span>
+      </div>
+
+      <div id="status" class="status">Esperando ejecucion...</div>
+    </section>
+
+    <section class="panel row">
+      <div class="box">
+        <h3>Resumen</h3>
+        <div id="summary">Sin resultados por ahora.</div>
+      </div>
+      <div class="box">
+        <h3>Convergencia</h3>
+        <div id="meta">Sin datos.</div>
+      </div>
+    </section>
+
+    <section class="panel row">
+      <div>
+        <h3>f(x) y puntos de Newton</h3>
+        <canvas id="chartFx"></canvas>
+      </div>
+      <div>
+        <h3>Error por iteracion</h3>
+        <canvas id="chartErr"></canvas>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>Tabla de convergencia</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>i</th>
+              <th>x_i</th>
+              <th>f(x_i)</th>
+              <th>f'(x_i)</th>
+              <th>x_(i+1)</th>
+              <th>Error</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    let chartFx = null;
+    let chartErr = null;
+
+    function fmt(v) {
+      if (!Number.isFinite(v)) return "NaN";
+      return Number(v).toExponential(6);
+    }
+
+    function buildF(expr) {
+      return function (x) {
+        return math.evaluate(expr, { x: x, pi: Math.PI, e: Math.E });
+      };
+    }
+
+    function derivadaNumerica(f, x, h) {
+      return (f(x + h) - f(x - h)) / (2 * h);
+    }
+
+    function newtonRaphson(f, x0, tol, maxIter, h) {
+      const rows = [];
+      const hist = [x0];
+
+      let xi = x0;
+      let converged = false;
+      let warning = null;
+
+      for (let i = 1; i <= maxIter; i++) {
+        const fxi = f(xi);
+        const dfxi = derivadaNumerica(f, xi, h);
+
+        if (!Number.isFinite(fxi) || !Number.isFinite(dfxi)) {
+          throw new Error("f(x) o f'(x) no es finito en alguna iteracion.");
+        }
+
+        if (Math.abs(dfxi) < 1e-12) {
+          warning = "Derivada cercana a cero. El metodo se detuvo.";
+          rows.push({ i, xi, fxi, dfxi, xnext: NaN, err: NaN });
+          break;
+        }
+
+        const xnext = xi - fxi / dfxi;
+        const err = Math.abs(xnext - xi);
+
+        rows.push({ i, xi, fxi, dfxi, xnext, err });
+        hist.push(xnext);
+
+        if (err < tol) {
+          converged = true;
+          xi = xnext;
+          break;
+        }
+
+        xi = xnext;
+      }
+
+      return { root: xi, rows, hist, converged, warning };
+    }
+
+    function fillTable(rows) {
+      const tbody = document.getElementById("tbody");
+      tbody.innerHTML = "";
+
+      rows.forEach((r) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${r.i}</td>
+          <td>${fmt(r.xi)}</td>
+          <td>${fmt(r.fxi)}</td>
+          <td>${fmt(r.dfxi)}</td>
+          <td>${fmt(r.xnext)}</td>
+          <td>${fmt(r.err)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function drawFx(f, hist) {
+      const minH = Math.min(...hist);
+      const maxH = Math.max(...hist);
+      const pad = Math.max(1, 0.4 * (maxH - minH || 1));
+      const xmin = minH - pad;
+      const xmax = maxH + pad;
+
+      const n = 360;
+      const step = (xmax - xmin) / (n - 1);
+      const curve = [];
+      for (let i = 0; i < n; i++) {
+        const x = xmin + i * step;
+        const y = f(x);
+        if (Number.isFinite(y)) curve.push({ x, y });
+      }
+
+      const pts = hist.map((x) => ({ x, y: f(x) }));
+      const axisX = [{ x: xmin, y: 0 }, { x: xmax, y: 0 }];
+
+      if (chartFx) chartFx.destroy();
+      chartFx = new Chart(document.getElementById("chartFx"), {
+        type: "scatter",
+        data: {
+          datasets: [
+            {
+              type: "line",
+              label: "f(x)",
+              data: curve,
+              borderColor: "#155e75",
+              borderWidth: 2,
+              pointRadius: 0
+            },
+            {
+              type: "line",
+              label: "y=0",
+              data: axisX,
+              borderColor: "#64748b",
+              borderWidth: 1.2,
+              pointRadius: 0
+            },
+            {
+              label: "Iteraciones",
+              data: pts,
+              backgroundColor: "#ea580c",
+              pointRadius: 4
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: { type: "linear", title: { display: true, text: "x" } },
+            y: { title: { display: true, text: "f(x)" } }
+          }
+        }
+      });
+    }
+
+    function drawError(rows) {
+      const data = rows
+        .filter((r) => Number.isFinite(r.err) && r.err > 0)
+        .map((r) => ({ x: r.i, y: r.err }));
+
+      if (chartErr) chartErr.destroy();
+      chartErr = new Chart(document.getElementById("chartErr"), {
+        type: "line",
+        data: {
+          datasets: [{
+            label: "Error",
+            data,
+            borderColor: "#b91c1c",
+            backgroundColor: "rgba(185, 28, 28, 0.16)",
+            fill: true,
+            pointRadius: 3,
+            tension: 0.18
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: { type: "linear", ticks: { precision: 0 }, title: { display: true, text: "Iteracion" } },
+            y: { type: "logarithmic", title: { display: true, text: "Error (log)" } }
+          }
+        }
+      });
+    }
+
+    function run() {
+      const status = document.getElementById("status");
+      const summary = document.getElementById("summary");
+      const meta = document.getElementById("meta");
+
+      try {
+        const expr = document.getElementById("fexpr").value.trim();
+        const x0 = Number(document.getElementById("x0").value);
+        const tol = Number(document.getElementById("tol").value);
+        const maxIter = Math.floor(Number(document.getElementById("maxIter").value));
+        const h = Number(document.getElementById("h").value);
+
+        if (!expr) throw new Error("Ingresa una funcion f(x).");
+        if (!Number.isFinite(x0)) throw new Error("x0 debe ser un numero valido.");
+        if (!(tol > 0)) throw new Error("La tolerancia debe ser positiva.");
+        if (!(maxIter > 0)) throw new Error("Max. iteraciones debe ser mayor que cero.");
+        if (!(h > 0)) throw new Error("h debe ser positivo.");
+
+        const f = buildF(expr);
+        const out = newtonRaphson(f, x0, tol, maxIter, h);
+
+        fillTable(out.rows);
+        drawFx(f, out.hist);
+        drawError(out.rows);
+
+        summary.innerHTML = `
+          <p><strong>f(x):</strong> ${expr}</p>
+          <p><strong>Raiz aproximada:</strong> ${fmt(out.root)}</p>
+          <p><strong>f(raiz):</strong> ${fmt(f(out.root))}</p>
+        `;
+
+        const last = out.rows[out.rows.length - 1];
+        meta.innerHTML = `
+          <p><strong>Estado:</strong> ${out.converged ? "Convergencia alcanzada" : "Finalizado sin convergencia estricta"}</p>
+          <p><strong>Iteraciones:</strong> ${out.rows.length}</p>
+          <p><strong>Error final:</strong> ${last && Number.isFinite(last.err) ? fmt(last.err) : "-"}</p>
+          <p><strong>Observacion:</strong> ${out.warning ? out.warning : "Sin advertencias"}</p>
+        `;
+
+        status.textContent = out.warning ? out.warning : "Ejecucion completada correctamente.";
+        status.className = out.warning ? "status error" : "status ok";
+      } catch (e) {
+        status.textContent = "Error: " + e.message;
+        status.className = "status error";
+      }
+    }
+
+    function clearAll() {
+      document.getElementById("tbody").innerHTML = "";
+      document.getElementById("summary").textContent = "Sin resultados por ahora.";
+      document.getElementById("meta").textContent = "Sin datos.";
+      document.getElementById("status").textContent = "Limpio. Listo para una nueva ejecucion.";
+      document.getElementById("status").className = "status";
+
+      if (chartFx) {
+        chartFx.destroy();
+        chartFx = null;
+      }
+      if (chartErr) {
+        chartErr.destroy();
+        chartErr = null;
+      }
+    }
+
+    document.getElementById("btnRun").addEventListener("click", run);
+    document.getElementById("btnClear").addEventListener("click", clearAll);
+
+    document.querySelectorAll(".chip").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        document.getElementById("fexpr").value = chip.dataset.f;
+        document.getElementById("x0").value = chip.dataset.x0;
+      });
+    });
+  </script>
+</body>
+</html>

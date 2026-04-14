@@ -1,0 +1,479 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Metodo de Punto Fijo - Visualizador</title>
+  <script src="https://cdn.jsdelivr.net/npm/mathjs@12.4.1/lib/browser/math.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --card: #ffffff;
+      --line: #d9e1ec;
+      --text: #1f2937;
+      --muted: #64748b;
+      --primary: #0f766e;
+      --danger: #b91c1c;
+      --ok: #15803d;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(180deg, #ebf2fa 0%, var(--bg) 100%);
+      color: var(--text);
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 1.8rem;
+    }
+
+    .subtitle {
+      margin: 0 0 16px;
+      color: var(--muted);
+    }
+
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 5px 14px rgba(0, 0, 0, 0.05);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+      align-items: end;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .field.func { grid-column: span 2; }
+
+    label {
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    input {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 0.95rem;
+      width: 100%;
+    }
+
+    .actions {
+      margin-top: 12px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: 0;
+      border-radius: 8px;
+      padding: 10px 14px;
+      background: var(--primary);
+      color: #fff;
+      cursor: pointer;
+      font-size: 0.95rem;
+    }
+
+    button.secondary {
+      background: #4b5563;
+    }
+
+    .quick {
+      margin-top: 12px;
+    }
+
+    .chip {
+      display: inline-block;
+      border-radius: 999px;
+      background: #e6fcf5;
+      color: #087f5b;
+      padding: 6px 10px;
+      font-size: 0.84rem;
+      margin-right: 6px;
+      margin-bottom: 6px;
+      cursor: pointer;
+    }
+
+    .status {
+      margin-top: 10px;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
+    .status.ok { color: var(--ok); }
+    .status.error { color: var(--danger); }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .box {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 12px;
+      background: #fbfdff;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    th, td {
+      border-bottom: 1px solid var(--line);
+      padding: 7px;
+      text-align: right;
+    }
+
+    th:first-child, td:first-child { text-align: center; }
+
+    .table-wrap {
+      max-height: 340px;
+      overflow: auto;
+    }
+
+    @media (max-width: 900px) {
+      .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .field.func { grid-column: span 2; }
+      .row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Metodo de Punto Fijo en HTML + JavaScript</h1>
+    <p class="subtitle">Ingresa g(x), el valor inicial y parametros para ver iteraciones, convergencia y graficos.</p>
+
+    <section class="panel">
+      <div class="grid">
+        <div class="field func">
+          <label for="gexpr">Funcion g(x)</label>
+          <input id="gexpr" value="exp(-x)" />
+        </div>
+        <div class="field">
+          <label for="x0">x0</label>
+          <input id="x0" type="number" step="any" value="1" />
+        </div>
+        <div class="field">
+          <label for="tol">Tolerancia</label>
+          <input id="tol" type="number" step="any" value="0.000001" />
+        </div>
+        <div class="field">
+          <label for="maxIter">Max. iteraciones</label>
+          <input id="maxIter" type="number" step="1" value="50" />
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="btnRun">Resolver</button>
+        <button id="btnClear" class="secondary">Limpiar</button>
+      </div>
+
+      <div class="quick">
+        <span class="chip" data-g="exp(-x)" data-x0="1">exp(-x)</span>
+        <span class="chip" data-g="(x + 2)^(1/3)" data-x0="1">(x+2)^(1/3)</span>
+        <span class="chip" data-g="1 - 0.5*x" data-x0="0.5">1 - 0.5x</span>
+        <span class="chip" data-g="tanh(0.9*x + 0.2)" data-x0="0.1">tanh(0.9x+0.2)</span>
+      </div>
+
+      <div id="status" class="status">Esperando ejecucion...</div>
+    </section>
+
+    <section class="panel row">
+      <div class="box">
+        <h3>Resumen</h3>
+        <div id="summary">Sin resultados por ahora.</div>
+      </div>
+      <div class="box">
+        <h3>Convergencia</h3>
+        <div id="meta">Sin datos.</div>
+      </div>
+    </section>
+
+    <section class="panel row">
+      <div>
+        <h3>Grafico cobweb: g(x) vs y=x</h3>
+        <canvas id="chartCobweb"></canvas>
+      </div>
+      <div>
+        <h3>Error por iteracion</h3>
+        <canvas id="chartError"></canvas>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>Tabla de convergencia</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>i</th>
+              <th>x_i</th>
+              <th>x_(i+1)</th>
+              <th>Error |x_(i+1)-x_i|</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    let chartCobweb = null;
+    let chartError = null;
+
+    function fnum(v) {
+      if (!Number.isFinite(v)) return "NaN";
+      return Number(v).toExponential(6);
+    }
+
+    function parseG(expr) {
+      return function (x) {
+        return math.evaluate(expr, { x: x, pi: Math.PI, e: Math.E });
+      };
+    }
+
+    function puntoFijo(g, x0, tol, maxIter) {
+      const rows = [];
+      const hist = [x0];
+
+      let xi = x0;
+      let converged = false;
+
+      for (let i = 1; i <= maxIter; i++) {
+        const xnext = g(xi);
+        if (!Number.isFinite(xnext)) {
+          throw new Error("g(x) produjo un valor no finito. Revisa la funcion.");
+        }
+
+        const err = Math.abs(xnext - xi);
+        rows.push({ i, xi, xnext, err });
+        hist.push(xnext);
+
+        if (err < tol) {
+          converged = true;
+          return { root: xnext, rows, hist, converged };
+        }
+        xi = xnext;
+      }
+
+      return { root: hist[hist.length - 1], rows, hist, converged };
+    }
+
+    function fillTable(rows) {
+      const tbody = document.getElementById("tbody");
+      tbody.innerHTML = "";
+      rows.forEach((r) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${r.i}</td>
+          <td>${fnum(r.xi)}</td>
+          <td>${fnum(r.xnext)}</td>
+          <td>${fnum(r.err)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function buildCobwebSegments(hist) {
+      const segs = [];
+      for (let i = 0; i < hist.length - 1; i++) {
+        const x0 = hist[i];
+        const x1 = hist[i + 1];
+        segs.push({ x: x0, y: x0 });
+        segs.push({ x: x0, y: x1 });
+        segs.push({ x: x1, y: x1 });
+      }
+      return segs;
+    }
+
+    function drawCobweb(g, hist) {
+      const minH = Math.min(...hist);
+      const maxH = Math.max(...hist);
+      const pad = Math.max(0.5, 0.25 * (maxH - minH || 1));
+      const xmin = minH - pad;
+      const xmax = maxH + pad;
+
+      const n = 300;
+      const step = (xmax - xmin) / (n - 1);
+      const gx = [];
+      const yEqx = [];
+
+      for (let i = 0; i < n; i++) {
+        const x = xmin + i * step;
+        const y = g(x);
+        if (Number.isFinite(y)) gx.push({ x, y });
+        yEqx.push({ x, y: x });
+      }
+
+      const segs = buildCobwebSegments(hist);
+
+      if (chartCobweb) chartCobweb.destroy();
+      chartCobweb = new Chart(document.getElementById("chartCobweb"), {
+        type: "scatter",
+        data: {
+          datasets: [
+            {
+              type: "line",
+              label: "g(x)",
+              data: gx,
+              borderColor: "#0f766e",
+              borderWidth: 2,
+              pointRadius: 0
+            },
+            {
+              type: "line",
+              label: "y=x",
+              data: yEqx,
+              borderColor: "#64748b",
+              borderWidth: 1.2,
+              pointRadius: 0
+            },
+            {
+              type: "line",
+              label: "Iteraciones",
+              data: segs,
+              borderColor: "#ea580c",
+              borderWidth: 1.6,
+              pointRadius: 0,
+              tension: 0
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: { type: "linear", title: { display: true, text: "x" } },
+            y: { type: "linear", title: { display: true, text: "y" } }
+          }
+        }
+      });
+    }
+
+    function drawError(rows) {
+      const data = rows.map(r => ({ x: r.i, y: Math.max(r.err, 1e-16) }));
+
+      if (chartError) chartError.destroy();
+      chartError = new Chart(document.getElementById("chartError"), {
+        type: "line",
+        data: {
+          datasets: [{
+            label: "Error",
+            data,
+            borderColor: "#b91c1c",
+            backgroundColor: "rgba(185, 28, 28, 0.16)",
+            fill: true,
+            tension: 0.2,
+            pointRadius: 3
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: { type: "linear", ticks: { precision: 0 }, title: { display: true, text: "Iteracion" } },
+            y: { type: "logarithmic", title: { display: true, text: "Error (log)" } }
+          }
+        }
+      });
+    }
+
+    function run() {
+      const status = document.getElementById("status");
+      const summary = document.getElementById("summary");
+      const meta = document.getElementById("meta");
+
+      try {
+        const expr = document.getElementById("gexpr").value.trim();
+        const x0 = Number(document.getElementById("x0").value);
+        const tol = Number(document.getElementById("tol").value);
+        const maxIter = Math.floor(Number(document.getElementById("maxIter").value));
+
+        if (!expr) throw new Error("Ingresa una funcion g(x).");
+        if (!Number.isFinite(x0)) throw new Error("x0 debe ser un numero valido.");
+        if (!(tol > 0)) throw new Error("La tolerancia debe ser positiva.");
+        if (!(maxIter > 0)) throw new Error("Max. iteraciones debe ser mayor que cero.");
+
+        const g = parseG(expr);
+        const out = puntoFijo(g, x0, tol, maxIter);
+
+        fillTable(out.rows);
+        drawCobweb(g, out.hist);
+        drawError(out.rows);
+
+        summary.innerHTML = `
+          <p><strong>g(x):</strong> ${expr}</p>
+          <p><strong>Punto fijo aproximado:</strong> ${fnum(out.root)}</p>
+          <p><strong>g(x*) - x*:</strong> ${fnum(g(out.root) - out.root)}</p>
+        `;
+
+        const last = out.rows[out.rows.length - 1];
+        meta.innerHTML = `
+          <p><strong>Estado:</strong> ${out.converged ? "Convergencia alcanzada" : "Maximo de iteraciones"}</p>
+          <p><strong>Iteraciones:</strong> ${out.rows.length}</p>
+          <p><strong>Error final:</strong> ${last ? fnum(last.err) : "-"}</p>
+        `;
+
+        status.textContent = "Ejecucion completada correctamente.";
+        status.className = "status ok";
+      } catch (e) {
+        status.textContent = "Error: " + e.message;
+        status.className = "status error";
+      }
+    }
+
+    function clearAll() {
+      document.getElementById("tbody").innerHTML = "";
+      document.getElementById("summary").textContent = "Sin resultados por ahora.";
+      document.getElementById("meta").textContent = "Sin datos.";
+      document.getElementById("status").textContent = "Limpio. Listo para una nueva ejecucion.";
+      document.getElementById("status").className = "status";
+
+      if (chartCobweb) {
+        chartCobweb.destroy();
+        chartCobweb = null;
+      }
+      if (chartError) {
+        chartError.destroy();
+        chartError = null;
+      }
+    }
+
+    document.getElementById("btnRun").addEventListener("click", run);
+    document.getElementById("btnClear").addEventListener("click", clearAll);
+
+    document.querySelectorAll(".chip").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        document.getElementById("gexpr").value = chip.dataset.g;
+        document.getElementById("x0").value = chip.dataset.x0;
+      });
+    });
+  </script>
+</body>
+</html>

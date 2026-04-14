@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Laboratorio Numerico</title>
+  <style>
+    :root {
+      --bg-1: #ecf3ff;
+      --bg-2: #f6fbff;
+      --card: #ffffff;
+      --ink: #18212f;
+      --muted: #5f6b7a;
+      --line: #d8e4ef;
+      --accent: #0f6d8c;
+      --accent-soft: #e2f3f8;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      color: var(--ink);
+      background: radial-gradient(circle at 10% 0%, var(--bg-1), var(--bg-2) 55%);
+    }
+
+    .wrap {
+      max-width: 1160px;
+      margin: 0 auto;
+      padding: 28px 18px 40px;
+    }
+
+    .hero {
+      margin-bottom: 20px;
+      padding: 22px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #0f6d8c 0%, #0b8f6f 100%);
+      color: #fff;
+      box-shadow: 0 10px 28px rgba(13, 75, 98, 0.24);
+    }
+
+    .hero h1 {
+      margin: 0 0 8px;
+      font-size: 2rem;
+      letter-spacing: 0.2px;
+    }
+
+    .hero p {
+      margin: 0;
+      font-size: 1rem;
+      opacity: 0.95;
+    }
+
+    .section-title {
+      margin: 16px 0 10px;
+      font-size: 1.05rem;
+      color: var(--muted);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 12px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-height: 150px;
+    }
+
+    .tag {
+      display: inline-block;
+      width: fit-content;
+      font-size: 0.75rem;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .card h3 {
+      margin: 0;
+      font-size: 1.06rem;
+    }
+
+    .card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.35;
+      flex-grow: 1;
+    }
+
+    .btn {
+      text-decoration: none;
+      text-align: center;
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 0.92rem;
+      color: #fff;
+      background: var(--accent);
+      transition: transform 0.08s ease, opacity 0.2s ease;
+    }
+
+    .btn:hover {
+      opacity: 0.93;
+      transform: translateY(-1px);
+    }
+
+    .footer {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="hero">
+      <h1>Laboratorio Numerico</h1>
+      <p>Panel central para abrir todas las aplicaciones de metodos numericos en HTML + JavaScript.</p>
+    </section>
+
+    <p class="section-title">Metodos de raices</p>
+    <section class="grid">
+      <article class="card">
+        <span class="tag">Raices</span>
+        <h3>Biseccion</h3>
+        <p>Ingreso de f(x), tabla de convergencia, grafico de funcion y error por iteracion.</p>
+        <a class="btn" href="biseccion_web.html">Abrir</a>
+      </article>
+
+      <article class="card">
+        <span class="tag">Raices</span>
+        <h3>Punto Fijo</h3>
+        <p>Ingreso de g(x), trayectoria cobweb, tabla de iteraciones y convergencia.</p>
+        <a class="btn" href="punto_fijo_web.html">Abrir</a>
+      </article>
+
+      <article class="card">
+        <span class="tag">Raices</span>
+        <h3>Aceleracion de Aitken</h3>
+        <p>Punto fijo acelerado, tabla detallada por paso y graficos de secuencia/error.</p>
+        <a class="btn" href="aceleracion_aitken_web.html">Abrir</a>
+      </article>
+
+      <article class="card">
+        <span class="tag">Raices</span>
+        <h3>Newton-Raphson</h3>
+        <p>f(x) editable, derivada numerica, tabla iterativa y visualizacion del error.</p>
+        <a class="btn" href="newton_raphson_web.html">Abrir</a>
+      </article>
+    </section>
+
+    <p class="section-title">Aproximacion e integracion</p>
+    <section class="grid">
+      <article class="card">
+        <span class="tag">Interpolacion</span>
+        <h3>Lagrange</h3>
+        <p>Nodos personalizados, construccion iterativa, tabla de convergencia y graficos.</p>
+        <a class="btn" href="interpolacion_web.html">Abrir</a>
+      </article>
+
+      <article class="card">
+        <span class="tag">Integracion</span>
+        <h3>Metodos de integral</h3>
+        <p>Rectangulo, Trapecio y Simpson con tabla de terminos y convergencia por n.</p>
+        <a class="btn" href="metodos_integral_web.html">Abrir</a>
+      </article>
+
+      <article class="card">
+        <span class="tag">Probabilistico</span>
+        <h3>Monte Carlo 1D</h3>
+        <p>Estimacion de integral con IC95, muestreo reproducible y curva de convergencia.</p>
+        <a class="btn" href="monte_carlo_web.html">Abrir</a>
+      </article>
+    </section>
+
+    <p class="section-title">Modelado y algebra</p>
+    <section class="grid">
+      <article class="card">
+        <span class="tag">EDO</span>
+        <h3>Ecuaciones diferenciales</h3>
+        <p>Comparacion Euler vs RK4, tabla por paso y convergencia por refinamiento de h.</p>
+        <a class="btn" href="ecuaciones_diferenciales_web.html">Abrir</a>
+      </article>
+
+      <article class="card">
+        <span class="tag">Algebra lineal</span>
+        <h3>Sistemas lineales</h3>
+        <p>Eliminacion gaussiana con pasos, Gauss-Seidel y graficos de residuo/rectas 2x2.</p>
+        <a class="btn" href="sistemas_lineales_web.html">Abrir</a>
+      </article>
+    </section>
+
+    <p class="footer">Tip: abre este archivo en el navegador como punto de entrada del proyecto.</p>
+  </main>
+</body>
+</html>

@@ -1,0 +1,552 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Interpolacion de Lagrange - Visualizador</title>
+  <script src="https://cdn.jsdelivr.net/npm/mathjs@12.4.1/lib/browser/math.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --card: #ffffff;
+      --line: #d7e1eb;
+      --text: #1f2937;
+      --muted: #64748b;
+      --primary: #0b7285;
+      --ok: #15803d;
+      --err: #b91c1c;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      color: var(--text);
+      background: linear-gradient(180deg, #eaf1f8 0%, var(--bg) 100%);
+    }
+
+    .container {
+      max-width: 1250px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 1.85rem;
+    }
+
+    .subtitle {
+      margin: 0 0 16px;
+      color: var(--muted);
+    }
+
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.05);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 10px;
+      align-items: end;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .field.func { grid-column: span 2; }
+    .field.nodes { grid-column: span 2; }
+
+    label {
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    input {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 0.95rem;
+    }
+
+    .actions {
+      margin-top: 12px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: 0;
+      border-radius: 8px;
+      padding: 10px 14px;
+      cursor: pointer;
+      color: #fff;
+      background: var(--primary);
+      font-size: 0.95rem;
+    }
+
+    button.secondary { background: #475569; }
+
+    .chips {
+      margin-top: 12px;
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      background: #e6fcf5;
+      color: #087f5b;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 0.83rem;
+      cursor: pointer;
+    }
+
+    .status {
+      margin-top: 10px;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
+    .status.ok { color: var(--ok); }
+    .status.error { color: var(--err); }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .box {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 12px;
+      background: #fcfdff;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.89rem;
+    }
+
+    th, td {
+      border-bottom: 1px solid var(--line);
+      padding: 7px;
+      text-align: right;
+    }
+
+    th:first-child, td:first-child { text-align: center; }
+
+    .table-wrap {
+      max-height: 300px;
+      overflow: auto;
+    }
+
+    @media (max-width: 920px) {
+      .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .field.func, .field.nodes { grid-column: span 2; }
+      .row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Interpolacion de Lagrange en HTML + JavaScript</h1>
+    <p class="subtitle">Ingresa f(x), nodos x y punto de evaluacion para ver construccion iterativa, convergencia y graficos.</p>
+
+    <section class="panel">
+      <div class="grid">
+        <div class="field func">
+          <label for="fexpr">Funcion f(x)</label>
+          <input id="fexpr" value="sin(x)" />
+        </div>
+        <div class="field nodes">
+          <label for="xnodes">Nodos x (separados por coma)</label>
+          <input id="xnodes" value="0, 1.57079632679, 3.14159265359" />
+        </div>
+        <div class="field">
+          <label for="xeval">x_eval</label>
+          <input id="xeval" type="number" step="any" value="0.78539816339" />
+        </div>
+        <div class="field">
+          <label for="samples">Puntos grafico</label>
+          <input id="samples" type="number" step="1" value="350" />
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="btnRun">Interpolar</button>
+        <button id="btnClear" class="secondary">Limpiar</button>
+      </div>
+
+      <div class="chips">
+        <span class="chip" data-f="sin(x)" data-x="0, 1.57079632679, 3.14159265359" data-xe="0.78539816339">sin(x)</span>
+        <span class="chip" data-f="exp(-x/2)" data-x="0, 1, 2, 3" data-xe="1.5">exp(-x/2)</span>
+        <span class="chip" data-f="x^2 - 2*x + 1" data-x="-1, 0, 1, 2" data-xe="0.5">x^2-2x+1</span>
+      </div>
+
+      <div id="status" class="status">Esperando ejecucion...</div>
+    </section>
+
+    <section class="panel row">
+      <div class="box">
+        <h3>Resumen</h3>
+        <div id="summary">Sin resultados por ahora.</div>
+      </div>
+      <div class="box">
+        <h3>Convergencia</h3>
+        <div id="meta">Sin datos.</div>
+      </div>
+    </section>
+
+    <section class="panel row">
+      <div>
+        <h3>f(x), P(x) y nodos</h3>
+        <canvas id="chartMain"></canvas>
+      </div>
+      <div>
+        <h3>Error por grado (en x_eval)</h3>
+        <canvas id="chartConv"></canvas>
+      </div>
+    </section>
+
+    <section class="panel row">
+      <div>
+        <h3>Iteraciones de construccion (Lagrange)</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>i</th>
+                <th>x_i</th>
+                <th>y_i</th>
+                <th>L_i(x_eval)</th>
+                <th>Termino y_iL_i</th>
+                <th>Suma parcial</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyIter"></tbody>
+          </table>
+        </div>
+      </div>
+      <div>
+        <h3>Tabla de convergencia por grado</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Grado</th>
+                <th>P_k(x_eval)</th>
+                <th>f(x_eval)</th>
+                <th>Error</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyConv"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    let chartMain = null;
+    let chartConv = null;
+
+    function fmt(v) {
+      if (!Number.isFinite(v)) return "NaN";
+      return Number(v).toExponential(6);
+    }
+
+    function parseFunction(expr) {
+      return function (x) {
+        return math.evaluate(expr, { x: x, pi: Math.PI, e: Math.E });
+      };
+    }
+
+    function parseNodes(text) {
+      const xs = text
+        .split(",")
+        .map((s) => Number(s.trim()))
+        .filter((v) => Number.isFinite(v));
+
+      if (xs.length < 2) {
+        throw new Error("Necesitas al menos 2 nodos validos.");
+      }
+
+      const unique = new Set(xs.map((v) => v.toPrecision(15)));
+      if (unique.size !== xs.length) {
+        throw new Error("Los nodos x deben ser distintos.");
+      }
+
+      return xs;
+    }
+
+    function lagrangeAt(x, xs, ys) {
+      let p = 0;
+      for (let i = 0; i < xs.length; i++) {
+        let Li = 1;
+        for (let j = 0; j < xs.length; j++) {
+          if (i !== j) {
+            Li *= (x - xs[j]) / (xs[i] - xs[j]);
+          }
+        }
+        p += ys[i] * Li;
+      }
+      return p;
+    }
+
+    function tablaIteraciones(xeval, xs, ys) {
+      const rows = [];
+      let parcial = 0;
+
+      for (let i = 0; i < xs.length; i++) {
+        let Li = 1;
+        for (let j = 0; j < xs.length; j++) {
+          if (i !== j) Li *= (xeval - xs[j]) / (xs[i] - xs[j]);
+        }
+        const term = ys[i] * Li;
+        parcial += term;
+        rows.push({ i, xi: xs[i], yi: ys[i], Li, term, parcial });
+      }
+
+      return { rows, pEval: parcial };
+    }
+
+    function tablaConvergencia(xeval, fEval, xs, ys) {
+      const rows = [];
+      for (let k = 1; k < xs.length; k++) {
+        const xk = xs.slice(0, k + 1);
+        const yk = ys.slice(0, k + 1);
+        const pk = lagrangeAt(xeval, xk, yk);
+        rows.push({ grado: k, pk, fEval, err: Math.abs(fEval - pk) });
+      }
+      return rows;
+    }
+
+    function fillIter(rows) {
+      const tbody = document.getElementById("tbodyIter");
+      tbody.innerHTML = "";
+      rows.forEach((r) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${r.i}</td>
+          <td>${fmt(r.xi)}</td>
+          <td>${fmt(r.yi)}</td>
+          <td>${fmt(r.Li)}</td>
+          <td>${fmt(r.term)}</td>
+          <td>${fmt(r.parcial)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function fillConv(rows) {
+      const tbody = document.getElementById("tbodyConv");
+      tbody.innerHTML = "";
+      rows.forEach((r) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${r.grado}</td>
+          <td>${fmt(r.pk)}</td>
+          <td>${fmt(r.fEval)}</td>
+          <td>${fmt(r.err)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function drawMain(f, xs, ys, samples) {
+      const minX = Math.min(...xs);
+      const maxX = Math.max(...xs);
+      const span = Math.max(1e-8, maxX - minX);
+      const pad = 0.2 * span;
+      const a = minX - pad;
+      const b = maxX + pad;
+
+      const n = Math.max(80, Math.floor(samples));
+      const step = (b - a) / (n - 1);
+
+      const curveF = [];
+      const curveP = [];
+
+      for (let i = 0; i < n; i++) {
+        const x = a + i * step;
+        const yF = f(x);
+        const yP = lagrangeAt(x, xs, ys);
+        if (Number.isFinite(yF)) curveF.push({ x, y: yF });
+        if (Number.isFinite(yP)) curveP.push({ x, y: yP });
+      }
+
+      const nodePoints = xs.map((x, i) => ({ x, y: ys[i] }));
+
+      if (chartMain) chartMain.destroy();
+      chartMain = new Chart(document.getElementById("chartMain"), {
+        type: "scatter",
+        data: {
+          datasets: [
+            {
+              type: "line",
+              label: "f(x)",
+              data: curveF,
+              borderColor: "#0b7285",
+              borderWidth: 2,
+              pointRadius: 0
+            },
+            {
+              type: "line",
+              label: "P(x) Lagrange",
+              data: curveP,
+              borderColor: "#e8590c",
+              borderWidth: 2,
+              pointRadius: 0
+            },
+            {
+              label: "Nodos",
+              data: nodePoints,
+              backgroundColor: "#2b8a3e",
+              pointRadius: 4
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: { type: "linear", title: { display: true, text: "x" } },
+            y: { title: { display: true, text: "y" } }
+          }
+        }
+      });
+    }
+
+    function drawConvergence(rows) {
+      const pts = rows.map((r) => ({ x: r.grado, y: Math.max(r.err, 1e-16) }));
+
+      if (chartConv) chartConv.destroy();
+      chartConv = new Chart(document.getElementById("chartConv"), {
+        type: "line",
+        data: {
+          datasets: [{
+            label: "Error por grado",
+            data: pts,
+            borderColor: "#c92a2a",
+            backgroundColor: "rgba(201, 42, 42, 0.16)",
+            fill: true,
+            pointRadius: 3,
+            tension: 0.15
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: { type: "linear", ticks: { precision: 0 }, title: { display: true, text: "Grado k" } },
+            y: { type: "logarithmic", title: { display: true, text: "Error (log)" } }
+          }
+        }
+      });
+    }
+
+    function run() {
+      const status = document.getElementById("status");
+      const summary = document.getElementById("summary");
+      const meta = document.getElementById("meta");
+
+      try {
+        const expr = document.getElementById("fexpr").value.trim();
+        const xnodesText = document.getElementById("xnodes").value;
+        const xeval = Number(document.getElementById("xeval").value);
+        const samples = Number(document.getElementById("samples").value);
+
+        if (!expr) throw new Error("Ingresa una funcion f(x).");
+        if (!Number.isFinite(xeval)) throw new Error("x_eval debe ser valido.");
+        if (!(samples > 10)) throw new Error("Puntos grafico debe ser mayor que 10.");
+
+        const f = parseFunction(expr);
+        const xs = parseNodes(xnodesText);
+        const ys = xs.map((x) => f(x));
+
+        if (ys.some((y) => !Number.isFinite(y))) {
+          throw new Error("f(x_i) no es finito para algun nodo.");
+        }
+
+        const fEval = f(xeval);
+        if (!Number.isFinite(fEval)) {
+          throw new Error("f(x_eval) no es finito.");
+        }
+
+        const iter = tablaIteraciones(xeval, xs, ys);
+        const conv = tablaConvergencia(xeval, fEval, xs, ys);
+        const errFinal = Math.abs(fEval - iter.pEval);
+
+        fillIter(iter.rows);
+        fillConv(conv);
+        drawMain(f, xs, ys, samples);
+        drawConvergence(conv);
+
+        summary.innerHTML = `
+          <p><strong>f(x):</strong> ${expr}</p>
+          <p><strong>P(x_eval):</strong> ${fmt(iter.pEval)}</p>
+          <p><strong>f(x_eval):</strong> ${fmt(fEval)}</p>
+        `;
+
+        const convEnd = conv[conv.length - 1];
+        meta.innerHTML = `
+          <p><strong>Nodos:</strong> ${xs.length}</p>
+          <p><strong>Grado maximo:</strong> ${xs.length - 1}</p>
+          <p><strong>Error final:</strong> ${fmt(errFinal)}</p>
+          <p><strong>Error ultimo grado:</strong> ${convEnd ? fmt(convEnd.err) : "-"}</p>
+        `;
+
+        status.textContent = "Interpolacion completada correctamente.";
+        status.className = "status ok";
+      } catch (e) {
+        status.textContent = "Error: " + e.message;
+        status.className = "status error";
+      }
+    }
+
+    function clearAll() {
+      document.getElementById("tbodyIter").innerHTML = "";
+      document.getElementById("tbodyConv").innerHTML = "";
+      document.getElementById("summary").textContent = "Sin resultados por ahora.";
+      document.getElementById("meta").textContent = "Sin datos.";
+      document.getElementById("status").textContent = "Limpio. Listo para una nueva ejecucion.";
+      document.getElementById("status").className = "status";
+
+      if (chartMain) {
+        chartMain.destroy();
+        chartMain = null;
+      }
+      if (chartConv) {
+        chartConv.destroy();
+        chartConv = null;
+      }
+    }
+
+    document.getElementById("btnRun").addEventListener("click", run);
+    document.getElementById("btnClear").addEventListener("click", clearAll);
+
+    document.querySelectorAll(".chip").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        document.getElementById("fexpr").value = chip.dataset.f;
+        document.getElementById("xnodes").value = chip.dataset.x;
+        document.getElementById("xeval").value = chip.dataset.xe;
+      });
+    });
+  </script>
+</body>
+</html>

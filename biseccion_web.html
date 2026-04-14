@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Metodo de Biseccion - Visualizador</title>
+  <script src="https://cdn.jsdelivr.net/npm/mathjs@12.4.1/lib/browser/math.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --ink: #1f2937;
+      --muted: #6b7280;
+      --line: #dbe1ea;
+      --accent: #0b7285;
+      --accent-2: #f59f00;
+      --ok: #2b8a3e;
+      --danger: #c92a2a;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      color: var(--ink);
+      background: linear-gradient(180deg, #eef2f9 0%, var(--bg) 100%);
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    h1 {
+      margin-top: 0;
+      margin-bottom: 8px;
+      font-size: 1.8rem;
+    }
+
+    .subtitle {
+      margin-top: 0;
+      color: var(--muted);
+      margin-bottom: 18px;
+    }
+
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      margin-bottom: 16px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 10px;
+      align-items: end;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .field label {
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+
+    .field input {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      font-size: 0.95rem;
+    }
+
+    .field.funcion { grid-column: span 2; }
+    .field.intervalo { grid-column: span 1; }
+    .field.numeric { grid-column: span 1; }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: 0;
+      padding: 10px 14px;
+      border-radius: 8px;
+      color: white;
+      background: var(--accent);
+      cursor: pointer;
+      font-size: 0.95rem;
+    }
+
+    button.secondary {
+      background: #495057;
+    }
+
+    .status {
+      margin-top: 10px;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
+    .status.ok { color: var(--ok); }
+    .status.error { color: var(--danger); }
+
+    .result-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .result-box {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 12px;
+      background: #fcfdff;
+    }
+
+    .result-box h3 {
+      margin-top: 0;
+      margin-bottom: 8px;
+    }
+
+    .charts {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    th, td {
+      border-bottom: 1px solid var(--line);
+      padding: 8px;
+      text-align: right;
+    }
+
+    th:first-child, td:first-child { text-align: center; }
+
+    .table-wrap {
+      max-height: 340px;
+      overflow: auto;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 6px 8px;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      background: #e6f4ff;
+      color: #1864ab;
+      margin-right: 6px;
+      margin-bottom: 6px;
+      cursor: pointer;
+    }
+
+    @media (max-width: 900px) {
+      .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .field.funcion { grid-column: span 2; }
+      .charts, .result-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Metodo de Biseccion en HTML + JavaScript</h1>
+    <p class="subtitle">Ingresa f(x), intervalo inicial y parametros. Se muestran iteraciones, tabla de convergencia y graficos.</p>
+
+    <section class="panel">
+      <div class="grid">
+        <div class="field funcion">
+          <label for="funcion">Funcion f(x)</label>
+          <input id="funcion" type="text" value="x^3 - x - 2" />
+        </div>
+        <div class="field intervalo">
+          <label for="a">a</label>
+          <input id="a" type="number" step="any" value="1" />
+        </div>
+        <div class="field intervalo">
+          <label for="b">b</label>
+          <input id="b" type="number" step="any" value="2" />
+        </div>
+        <div class="field numeric">
+          <label for="tol">Tolerancia</label>
+          <input id="tol" type="number" step="any" value="0.000001" />
+        </div>
+        <div class="field numeric">
+          <label for="maxIter">Max. iteraciones</label>
+          <input id="maxIter" type="number" step="1" value="50" />
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="btnResolver">Resolver</button>
+        <button id="btnLimpiar" class="secondary">Limpiar tabla</button>
+      </div>
+
+      <p style="margin-top: 12px; margin-bottom: 6px; color: #6b7280;">Ejemplos rapidos:</p>
+      <div>
+        <span class="pill" data-func="x^3 - x - 2" data-a="1" data-b="2">x^3 - x - 2</span>
+        <span class="pill" data-func="cos(x) - x" data-a="0" data-b="1">cos(x) - x</span>
+        <span class="pill" data-func="exp(x) - 2 - x" data-a="1" data-b="2">exp(x) - 2 - x</span>
+        <span class="pill" data-func="x^2 - 2" data-a="1" data-b="2">x^2 - 2</span>
+      </div>
+
+      <div id="status" class="status">Esperando ejecucion...</div>
+    </section>
+
+    <section class="panel result-grid">
+      <div class="result-box">
+        <h3>Resumen</h3>
+        <div id="resumen">Sin resultados por ahora.</div>
+      </div>
+      <div class="result-box">
+        <h3>Convergencia</h3>
+        <div id="meta">Sin datos.</div>
+      </div>
+    </section>
+
+    <section class="panel charts">
+      <div>
+        <h3>Grafico de f(x) y puntos medios</h3>
+        <canvas id="chartFuncion"></canvas>
+      </div>
+      <div>
+        <h3>Error por iteracion</h3>
+        <canvas id="chartError"></canvas>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>Tabla de convergencia</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>i</th>
+              <th>a</th>
+              <th>b</th>
+              <th>m</th>
+              <th>f(m)</th>
+              <th>Error intervalo</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    let chartFuncion = null;
+    let chartError = null;
+
+    function fmt(v) {
+      if (!Number.isFinite(v)) return "NaN";
+      return v.toExponential ? Number(v).toExponential(6) : String(v);
+    }
+
+    function crearFuncion(expresion) {
+      return function (x) {
+        return math.evaluate(expresion, { x: x, pi: Math.PI, e: Math.E });
+      };
+    }
+
+    function biseccion(f, a, b, tol, maxIter) {
+      const fa = f(a);
+      const fb = f(b);
+
+      if (!Number.isFinite(fa) || !Number.isFinite(fb)) {
+        throw new Error("f(a) o f(b) no es finito. Revisa la funcion o el intervalo.");
+      }
+
+      if (fa * fb >= 0) {
+        throw new Error("La funcion no cambia de signo en [a, b].");
+      }
+
+      const filas = [];
+      let izq = a;
+      let der = b;
+      let m = (izq + der) / 2;
+      let convergio = false;
+
+      for (let i = 1; i <= maxIter; i++) {
+        m = (izq + der) / 2;
+        const fm = f(m);
+        const errIntervalo = Math.abs(der - izq) / 2;
+
+        filas.push({ i, a: izq, b: der, m, fm, err: errIntervalo });
+
+        if (Math.abs(fm) < tol || errIntervalo < tol) {
+          convergio = true;
+          break;
+        }
+
+        const fizq = f(izq);
+        if (fizq * fm < 0) der = m;
+        else izq = m;
+      }
+
+      return {
+        raiz: m,
+        convergio,
+        iteraciones: filas.length,
+        filas,
+        valorFinal: f(m)
+      };
+    }
+
+    function pintarTabla(filas) {
+      const tbody = document.getElementById("tbody");
+      tbody.innerHTML = "";
+      filas.forEach((r) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${r.i}</td>
+          <td>${fmt(r.a)}</td>
+          <td>${fmt(r.b)}</td>
+          <td>${fmt(r.m)}</td>
+          <td>${fmt(r.fm)}</td>
+          <td>${fmt(r.err)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function pintarChartFuncion(f, a, b, filas) {
+      const span = Math.max(1, Math.abs(b - a) * 0.25);
+      const minX = a - span;
+      const maxX = b + span;
+      const n = 320;
+      const step = (maxX - minX) / (n - 1);
+
+      const datosFuncion = [];
+      for (let i = 0; i < n; i++) {
+        const x = minX + i * step;
+        const y = f(x);
+        if (Number.isFinite(y)) datosFuncion.push({ x, y });
+      }
+
+      const medios = filas.map((r) => ({ x: r.m, y: r.fm }));
+      const ejeX = [
+        { x: minX, y: 0 },
+        { x: maxX, y: 0 }
+      ];
+
+      if (chartFuncion) chartFuncion.destroy();
+      chartFuncion = new Chart(document.getElementById("chartFuncion"), {
+        type: "scatter",
+        data: {
+          datasets: [
+            {
+              type: "line",
+              label: "f(x)",
+              data: datosFuncion,
+              borderColor: "#0b7285",
+              borderWidth: 2,
+              pointRadius: 0,
+            },
+            {
+              type: "line",
+              label: "y = 0",
+              data: ejeX,
+              borderColor: "#868e96",
+              borderWidth: 1,
+              pointRadius: 0,
+            },
+            {
+              label: "Puntos medios",
+              data: medios,
+              backgroundColor: "#f59f00",
+              pointRadius: 4,
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: { type: "linear", title: { display: true, text: "x" } },
+            y: { title: { display: true, text: "f(x)" } }
+          }
+        }
+      });
+    }
+
+    function pintarChartError(filas) {
+      const pts = filas.map((r) => ({ x: r.i, y: Math.max(r.err, 1e-16) }));
+      if (chartError) chartError.destroy();
+
+      chartError = new Chart(document.getElementById("chartError"), {
+        type: "line",
+        data: {
+          datasets: [{
+            label: "Error de intervalo",
+            data: pts,
+            borderColor: "#c92a2a",
+            backgroundColor: "rgba(201, 42, 42, 0.15)",
+            fill: true,
+            tension: 0.15,
+            pointRadius: 3
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: { type: "linear", title: { display: true, text: "Iteracion" }, ticks: { precision: 0 } },
+            y: { type: "logarithmic", title: { display: true, text: "Error (log)" } }
+          }
+        }
+      });
+    }
+
+    function resolver() {
+      const estado = document.getElementById("status");
+      const resumen = document.getElementById("resumen");
+      const meta = document.getElementById("meta");
+
+      try {
+        const expr = document.getElementById("funcion").value.trim();
+        const a = Number(document.getElementById("a").value);
+        const b = Number(document.getElementById("b").value);
+        const tol = Number(document.getElementById("tol").value);
+        const maxIter = Number(document.getElementById("maxIter").value);
+
+        if (!expr) throw new Error("Ingresa una funcion f(x).");
+        if (!Number.isFinite(a) || !Number.isFinite(b)) throw new Error("a y b deben ser numeros validos.");
+        if (a >= b) throw new Error("Debe cumplirse a < b.");
+        if (!(tol > 0)) throw new Error("La tolerancia debe ser positiva.");
+        if (!(maxIter > 0)) throw new Error("Max. iteraciones debe ser mayor que cero.");
+
+        const f = crearFuncion(expr);
+        const resultado = biseccion(f, a, b, tol, Math.floor(maxIter));
+
+        pintarTabla(resultado.filas);
+        pintarChartFuncion(f, a, b, resultado.filas);
+        pintarChartError(resultado.filas);
+
+        resumen.innerHTML = `
+          <p><strong>f(x):</strong> ${expr}</p>
+          <p><strong>Raiz aproximada:</strong> ${fmt(resultado.raiz)}</p>
+          <p><strong>f(raiz):</strong> ${fmt(resultado.valorFinal)}</p>
+        `;
+
+        const ultimo = resultado.filas[resultado.filas.length - 1];
+        meta.innerHTML = `
+          <p><strong>Estado:</strong> ${resultado.convergio ? "Convergencia alcanzada" : "Max. iteraciones alcanzado"}</p>
+          <p><strong>Iteraciones:</strong> ${resultado.iteraciones}</p>
+          <p><strong>Error final:</strong> ${fmt(ultimo.err)}</p>
+        `;
+
+        estado.textContent = "Ejecucion completada correctamente.";
+        estado.className = "status ok";
+      } catch (err) {
+        estado.textContent = "Error: " + err.message;
+        estado.className = "status error";
+      }
+    }
+
+    function limpiar() {
+      document.getElementById("tbody").innerHTML = "";
+      document.getElementById("resumen").textContent = "Sin resultados por ahora.";
+      document.getElementById("meta").textContent = "Sin datos.";
+      document.getElementById("status").textContent = "Limpio. Listo para una nueva ejecucion.";
+      document.getElementById("status").className = "status";
+
+      if (chartFuncion) {
+        chartFuncion.destroy();
+        chartFuncion = null;
+      }
+      if (chartError) {
+        chartError.destroy();
+        chartError = null;
+      }
+    }
+
+    document.getElementById("btnResolver").addEventListener("click", resolver);
+    document.getElementById("btnLimpiar").addEventListener("click", limpiar);
+
+    document.querySelectorAll(".pill").forEach((el) => {
+      el.addEventListener("click", () => {
+        document.getElementById("funcion").value = el.dataset.func;
+        document.getElementById("a").value = el.dataset.a;
+        document.getElementById("b").value = el.dataset.b;
+      });
+    });
+  </script>
+</body>
+</html>
